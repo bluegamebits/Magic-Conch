@@ -1,3 +1,5 @@
 service_account.json
 *.webm
 *.mp3
+*.m4a
+__pycache__/*
