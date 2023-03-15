@@ -4,7 +4,8 @@ import asyncio
 import youtube_dl
 import discord
 import google_voice
-
+from requests import get
+ 
 
 ytdl_format_options = {
     "format": "bestaudio/best",
@@ -38,9 +39,21 @@ class YTDLSource(discord.PCMVolumeTransformer):
     @classmethod
     async def from_url(cls, url, *, loop=None, stream=False, verbose=False):
         loop = loop or asyncio.get_event_loop()
-        data = await loop.run_in_executor(
-            None, lambda: ytdl.extract_info(url, download=not stream)
-        )
+        
+        # serches for video if not a link and chooses the first result, if it is a link it just passes it to youtube-dl to download
+
+        # TODO: Implement choosing between multiple search results
+        try:
+            await get(url)
+        except:
+            data = await loop.run_in_executor(
+                None, lambda: ytdl.extract_info(f"ytsearch:{url}", download=True)['entries'][0]
+            )
+        
+        else:
+            data = await loop.run_in_executor(
+                None, lambda: ytdl.extract_info(url, download=True)
+            )
 
         if "entries" in data:
             # Takes the first item from a playlist
@@ -77,14 +90,14 @@ class Music(commands.Cog):
 
         async with ctx.typing():
 
-            for i in range(3):
+            for i in range(10):
                 try:
                     player = await YTDLSource.from_url(url, loop=self.bot.loop, verbose=True)
                     break
                 except Exception as e:
                     print(f"Failed to download video: {e}")
                     print(f"Retrying... (attempt {i+1}/3)")
-                    await asyncio.sleep(2)
+                    await asyncio.sleep(1)
             vc = ctx.voice_client
 
             vc.play(
