@@ -96,7 +96,7 @@ class Music(commands.Cog):
                     break
                 except Exception as e:
                     print(f"Failed to download video: {e}")
-                    print(f"Retrying... (attempt {i+1}/3)")
+                    print(f"Retrying... (attempt {i+1}/10)")
                     await asyncio.sleep(1)
             vc = ctx.voice_client
 
