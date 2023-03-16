@@ -82,29 +82,38 @@ class Music(commands.Cog):
 
         await voice_channel.connect()
 
+    async def get_source(self, url):
+        """Retrieves source from url or search"""
+        for i in range(10):
+            try:
+                source = await YTDLSource.from_url(url, loop=self.bot.loop, verbose=True)
+                return source
+            except Exception as e:
+                print(f"Failed to download video: {e}")
+                print(f"Retrying... (attempt {i+1}/10)")
+                await asyncio.sleep(1)
+        return None
+    
+    async def play_music(self, ctx, source):
+        """Plays the given source in the voice channel"""
+        vc = await self.join(ctx)
+        vc = ctx.voice_client
+        vc.play(
+            source, after=lambda e: print(f"Player error: {e}") if e else None
+        )
+        await ctx.send(f"Now playing: {source.title}"
+                       )
     @commands.command()
     async def play(self, ctx, *, url):
         """Plays from a url (almost anything youtube_dl supports)"""
 
-        vc = await self.join(ctx)
-
         async with ctx.typing():
+            source = await self.get_source(url)
 
-            for i in range(10):
-                try:
-                    player = await YTDLSource.from_url(url, loop=self.bot.loop, verbose=True)
-                    break
-                except Exception as e:
-                    print(f"Failed to download video: {e}")
-                    print(f"Retrying... (attempt {i+1}/10)")
-                    await asyncio.sleep(1)
-            vc = ctx.voice_client
-
-            vc.play(
-                player, after=lambda e: print(f"Player error: {e}") if e else None
-            )
-
-        await ctx.send(f"Now playing: {player.title}")
+            if source:
+                await self.play_music(ctx, source)
+            else:
+                await ctx.send("Failed to retrieve music.")
 
     @commands.command()
     async def pause(self, ctx):
