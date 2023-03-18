@@ -1,13 +1,15 @@
 import youtube_downloader
 import asyncio
+import discord
 
 from async_timeout import timeout
 
 
 class Song:
-    def __init__(self, source):
+    def __init__(self, source, video_url):
         self.name = source.title
         self.source = source
+        self.video_url = video_url
 
 
 class MusicPlayer:
@@ -44,8 +46,8 @@ class MusicPlayer:
     async def play_song(self, ctx, url):
         self.update_ctx(ctx)
         task = asyncio.create_task(self.get_source(url))
-        source = await task
-        new_song = Song(source)
+        source, video_url = await task
+        new_song = Song(source, video_url)
 
         # TODO Reduntant if, else block, all it needs to do is add the song to the queue now
 
@@ -62,7 +64,12 @@ class MusicPlayer:
         else:
             await self.queue.put(new_song)
             print("Added " + new_song.name + " to the queue.")
-            await ctx.send("Added " + new_song.name + " to the queue.", delete_after=10)
+            embed = discord.Embed(description=f"Queued [{new_song.name}]({new_song.video_url}) [{self.ctx.author.mention}]", color=0xCFA2D8)
+            try:
+                await ctx.send(embed=embed)
+            except Exception as e:
+                print(e)
+            await ctx.send(f"[{self.ctx.author.mention}]")
 
     async def play_next_song(self):
         # TODO: Redundant if check as function is only called if there is already a song in the queue
@@ -70,7 +77,7 @@ class MusicPlayer:
             self.current_song = await self.queue.get()
             await self.join(self.ctx)
             try:
-                self.play_music_task = asyncio.create_task(self.play_music(self.current_song.source))
+                self.play_music_task = asyncio.create_task(self.play_music(self.current_song))
                 await self.play_music_task
             except Exception as e:
                 print(f"Error on playing music: {e}")
@@ -105,15 +112,15 @@ class MusicPlayer:
         print("Getting source")
         for i in range(10):
             try:
-                source = await youtube_downloader.YTDLSource.from_url(url, loop=self.bot.loop, verbose=True)
-                return source
+                source, video_url = await youtube_downloader.YTDLSource.from_url(url, loop=self.bot.loop, verbose=True)
+                return source, video_url
             except Exception as e:
                 print(f"Failed to download video: {e}")
                 print(f"Retrying... (attempt {i+1}/10)")
                 await asyncio.sleep(1)
         return None
     
-    async def play_music(self, source):
+    async def play_music(self, song):
         """Plays the given source in the voice channel"""
         print("Playing music")
 
@@ -124,11 +131,12 @@ class MusicPlayer:
             try:
                 vc.play(
                     #source, after=lambda e: print(f"Player error: {e}") if e else None
-                    source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set)
+                    song.source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set)
                 )
             except asyncio.CancelledError:
                 print("Music canceled.")
-            await self.ctx.send(f"Now playing: {source.title}")
+            embed = discord.Embed(title="Now playing", description=f"[{song.name}]({song.video_url}) [{self.ctx.author.mention}]", color=0xCFA2D8)
+            await self.ctx.send(embed=embed)
                            
         except Exception as e:
             print(f"Error on Discord player: {e}")

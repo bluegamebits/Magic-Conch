@@ -54,9 +54,13 @@ class YTDLSource(discord.PCMVolumeTransformer):
         if "entries" in data:
             # Takes the first item from a playlist
             data = data["entries"][0]
+        
+       
+        
+        video_url = f"https://www.youtube.com/watch?v={data['id']}"
 
         filename = data["url"] if stream else ytdl.prepare_filename(data)
-        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data)
+        return cls(discord.FFmpegPCMAudio(filename, **ffmpeg_options), data=data), video_url
     
 
 #class voicespeak(commands.FlagConverter, prefix='zz', delimiter=''):

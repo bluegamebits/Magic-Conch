@@ -3,3 +3,5 @@ service_account.json
 *.mp3
 *.m4a
 __pycache__/*
+*.part
+*.ytdl
