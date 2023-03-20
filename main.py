@@ -4,6 +4,9 @@ import os
 import discord
 from discord.ext import commands
 import youtube_dl
+import translations
+
+_ = translations.setup_i18n('es')
 
 # Suppress noise about console usage from errorss
 youtube_dl.utils.bug_reports_message = lambda: ""
@@ -15,9 +18,9 @@ intents.members = True
 # Define bot variable and activity type
 bot = commands.Bot(
     command_prefix='.',
-    description="Bot de concha",
+    description=_("Magic conch bot"),
     intents=intents,
-    activity = discord.Activity(type=discord.ActivityType.playing, name='Music',)
+    #activity = discord.Activity(type=discord.ActivityType.listening, name='',)
 )
 
 

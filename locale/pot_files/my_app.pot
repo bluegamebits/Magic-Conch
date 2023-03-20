@@ -1,0 +1,148 @@
+# Spanish translations for Magic Conch Bot
+# Copyright (C) 2023 bluegamebits
+# This file is distributed under the same license as the Magic Conch bot on github.
+# https://github.com/bluegamebits/Magic-Conch , 2023.
+#
+#, fuzzy
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.05\n"
+"Report-Msgid-Bugs-To: https://github.com/bluegamebits/Magic-Conch\n"
+"POT-Creation-Date: 2023-03-22 15:11-0600\n"
+"PO-Revision-Date: 2023-03-22 15:51-0600\n"
+"Last-Translator: bluegamebits\n"
+"Language-Team: Spanish\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+
+#: main.py:21
+msgid "Magic conch bot"
+msgstr ""
+
+#: conch_voice.py:37
+msgid "Error: Voice client is not connected."
+msgstr ""
+
+#: conch_voice.py:40
+msgid "Error playing audio file: "
+msgstr ""
+
+#: openai_module.py:29
+msgid "You are the magic conch. You are not chatgpt."
+msgstr ""
+
+#: openai_module.py:30
+msgid "You will always respond with short, cryptic, and vague answers. All your responses will always be in a single sentence. Tell me, "
+msgstr ""
+
+#: player_commands.py:33
+msgid "Audio playback paused."
+msgstr ""
+
+#: player_commands.py:35
+msgid "No audio is currently playing."
+msgstr ""
+
+#: player_commands.py:43
+msgid "Audio playback resumed"
+msgstr ""
+
+#: player_commands.py:45
+msgid "Audio playback is not paused"
+msgstr ""
+
+#: player_commands.py:53
+msgid "Disconnected from voice channel"
+msgstr ""
+
+#: player_commands.py:56 player_commands.py:65 player_commands.py:73
+msgid "Not currently connected to a voice channel"
+msgstr ""
+
+#: player_commands.py:63
+msgid "Skipped song"
+msgstr ""
+
+#: player_commands.py:76
+msgid "Volume changed to "
+msgstr ""
+
+#: Player.py:70
+msgid "Queued "
+msgstr ""
+
+#: Player.py:100 Player.py:108
+msgid "Not playing any music."
+msgstr ""
+
+#: Player.py:146
+msgid "Now playing"
+msgstr ""
+
+#: Player.py:151
+msgid "Error on Discord player: "
+msgstr ""
+
+#: openai_module.py:16 [list]
+
+msgid "Everything is possible if you desire it strongly enough."
+msgstr ""
+
+msgid "I cannot answer at this time, ask me later."
+msgstr ""
+
+msgid "Yes, but not without consequences."
+msgstr ""
+
+msgid "The signs point towards success."
+msgstr ""
+
+msgid "Don't count on it."
+msgstr ""
+
+msgid "It's better that you discover it for yourself."
+msgstr ""
+
+msgid "My sources say no."
+msgstr ""
+
+msgid "It's possible, but not certain."
+msgstr ""
+
+msgid "Yes, but not in the way you expect."
+msgstr ""
+
+msgid "The answer is right in front of you."
+msgstr ""
+
+msgid "I'm not sure that's a good idea."
+msgstr ""
+
+msgid "You need to think more before making a decision."
+msgstr ""
+
+msgid "Definitely yes!"
+msgstr ""
+
+msgid "Not until you find what you're looking for."
+msgstr ""
+
+msgid "You should wait and see what happens."
+msgstr ""
+
+msgid "I can't answer that now."
+msgstr ""
+
+msgid "It's not my place to say."
+msgstr ""
+
+msgid "If you take the right path, you will achieve it."
+msgstr ""
+
+msgid "You should focus on other matters right now."
+msgstr ""
+
+msgid "The answer is in your dreams."
+msgstr ""

@@ -1,0 +1,147 @@
+# Spanish translations for Magic Conch Bot
+# Copyright (C) 2023 bluegamebits
+# This file is distributed under the same license as the Magic Conch bot on github.
+#https://github.com/bluegamebits/Magic-Conch , 2023.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: 0.05\n"
+"Report-Msgid-Bugs-To: https://github.com/bluegamebits/Magic-Conch\n"
+"POT-Creation-Date: 2023-03-22 15:11-0600\n"
+"PO-Revision-Date: 2023-03-22 15:51-0600\n"
+"Last-Translator: bluegamebits\n"
+"Language-Team: Spanish\n"
+"Language: es\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=UTF-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+
+#: main.py:21
+msgid "Magic conch bot"
+msgstr "Bot caracola mágica"
+
+#: conch_voice.py:37
+msgid "Error: Voice client is not connected."
+msgstr "Error: El cliente de voz no está conectado."
+
+#: conch_voice.py:40
+msgid "Error playing audio file: "
+msgstr "Error al reproducir el archivo de audio: "
+
+#: openai_module.py:29
+msgid "Eres la caracola mágica. No eres chatgpt."
+msgstr ""
+
+#: openai_module.py:30
+msgid "Siempre responderás con respuestas breves, crípticas y vagas. Todas tus respuestas seran siempre en una sola oracion. Dime, "
+msgstr ""
+
+#: player_commands.py:33
+msgid "Audio playback paused."
+msgstr "Reproducción de audio en pausa."
+
+#: player_commands.py:35
+msgid "No audio is currently playing."
+msgstr "No se está reproduciendo ningún audio."
+
+#: player_commands.py:43
+msgid "Audio playback resumed"
+msgstr "Reproducción de audio reanudada"
+
+#: player_commands.py:45
+msgid "Audio playback is not paused"
+msgstr "La reproducción de audio no está en pausa"
+
+#: player_commands.py:53
+msgid "Disconnected from voice channel"
+msgstr "Desconectado del canal de voz"
+
+#: player_commands.py:56 player_commands.py:65 player_commands.py:73
+msgid "Not currently connected to a voice channel"
+msgstr "Actualmente no conectado a un canal de voz"
+
+#: player_commands.py:63
+msgid "Skipped song"
+msgstr "Canción omitida"
+
+#: player_commands.py:76
+msgid "Volume changed to "
+msgstr "Volumen cambiado a "
+
+#: Player.py:70
+msgid "Queued "
+msgstr "En cola "
+
+#: Player.py:100 Player.py:108
+msgid "Not playing any music."
+msgstr "No se está reproduciendo ninguna música."
+
+#: Player.py:146
+msgid "Now playing"
+msgstr "Reproduciendo ahora"
+
+#: Player.py:151
+msgid "Error on Discord player: "
+msgstr "Error en el reproductor de Discord: "
+
+#: openai_module.py:16 [list]
+msgid "Everything is possible if you desire it strongly enough."
+msgstr "Todo es posible si lo deseas con suficiente fuerza."
+
+msgid "I cannot answer at this time, ask me later."
+msgstr "No puedo responder en este momento, pregúntame más tarde."
+
+msgid "Yes, but not without consequences."
+msgstr "Sí, pero no sin consecuencias."
+
+msgid "The signs point towards success."
+msgstr "Los signos apuntan hacia el éxito."
+
+msgid "Don't count on it."
+msgstr "No cuentes con ello."
+
+msgid "It's better that you discover it for yourself."
+msgstr "Es mejor que lo descubras por ti mismo."
+
+msgid "My sources say no."
+msgstr "Mis fuentes dicen que no."
+
+msgid "It's possible, but not certain."
+msgstr "Es posible, pero no es seguro."
+
+msgid "Yes, but not in the way you expect."
+msgstr "Sí, pero no de la manera que esperas."
+
+msgid "The answer is right in front of you."
+msgstr "La respuesta está delante de ti."
+
+msgid "I'm not sure that's a good idea."
+msgstr "No estoy seguro de que esa sea una buena idea."
+
+msgid "You need to think more before making a decision."
+msgstr "Necesitas reflexionar más antes de tomar una decisión."
+
+msgid "Definitely yes!"
+msgstr "¡Definitivamente sí!"
+
+msgid "Not until you find what you're looking for."
+msgstr "No hasta que encuentres lo que buscas."
+
+msgid "You should wait and see what happens."
+msgstr "Debes esperar y ver qué sucede."
+
+msgid "I can't answer that now."
+msgstr "No puedo responder eso ahora."
+
+msgid "It's not my place to say."
+msgstr "No es mi lugar decirlo."
+
+msgid "If you take the right path, you will achieve it."
+msgstr "Si tomas el camino correcto, lo conseguirás."
+
+msgid "You should focus on other matters right now."
+msgstr "Deberías concentrarte en otros asuntos en este momento."
+
+msgid "The answer is in your dreams."
+msgstr "La respuesta está en tus sueños."

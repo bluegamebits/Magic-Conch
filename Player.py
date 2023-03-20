@@ -1,5 +1,8 @@
 import youtube_downloader
 import asyncio
+import translations
+
+_ = translations.setup_i18n('es')
 import discord
 
 from async_timeout import timeout
@@ -64,12 +67,11 @@ class MusicPlayer:
         else:
             await self.queue.put(new_song)
             print("Added " + new_song.name + " to the queue.")
-            embed = discord.Embed(description=f"Queued [{new_song.name}]({new_song.video_url}) [{self.ctx.author.mention}]", color=0xCFA2D8)
+            embed = discord.Embed(description=_("Queued ") + f"[{new_song.name}]({new_song.video_url}) [{self.ctx.author.mention}]", color=0xCFA2D8)
             try:
                 await ctx.send(embed=embed)
             except Exception as e:
                 print(e)
-            await ctx.send(f"[{self.ctx.author.mention}]")
 
     async def play_next_song(self):
         # TODO: Redundant if check as function is only called if there is already a song in the queue
@@ -84,18 +86,26 @@ class MusicPlayer:
         else:
             print(self.queue)
 
-    async def stop(self):
+    async def stop(self, ctx):
         """Stops play back and clears current song, queue, stops player task and sets to None"""
-        self.current_song = None
-        self.queue = asyncio.Queue()
-        self.task.cancel()
-        await self.task
-        self.task = None
-        print("Stopped playback and cleared queue.")
+        self.update_ctx(ctx)
+        if(ctx.voice_client.is_connected()):
+            self.current_song = None
+            self.queue = asyncio.Queue()
+            self.task.cancel()
+            await self.task
+            self.task = None
+            print("Stopped playback and cleared queue.")
+        else:
+            await ctx.send(_("Not playing any music."))
 
-    async def skip(self):
-        self.play_music_task.cancel()
-        self.ctx.voice_client.stop()
+    async def skip(self, ctx):
+        self.update_ctx(ctx)
+        if(ctx.voice_client.is_connected()):
+            self.play_music_task.cancel()
+            self.ctx.voice_client.stop()
+        else:
+            await ctx.send(_("Not playing any music."))
 
     async def join(self, ctx):
         """Joins the voice channel of whoever called the command"""
@@ -115,7 +125,7 @@ class MusicPlayer:
                 source, video_url = await youtube_downloader.YTDLSource.from_url(url, loop=self.bot.loop, verbose=True)
                 return source, video_url
             except Exception as e:
-                print(f"Failed to download video: {e}")
+                print(f"Failed to get source : {e}")
                 print(f"Retrying... (attempt {i+1}/10)")
                 await asyncio.sleep(1)
         return None
@@ -127,16 +137,15 @@ class MusicPlayer:
         try:
             
             vc = self.ctx.voice_client
-            #after_task = asyncio.ensure_future(self.after_song())
             try:
                 vc.play(
-                    #source, after=lambda e: print(f"Player error: {e}") if e else None
                     song.source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set)
                 )
             except asyncio.CancelledError:
                 print("Music canceled.")
-            embed = discord.Embed(title="Now playing", description=f"[{song.name}]({song.video_url}) [{self.ctx.author.mention}]", color=0xCFA2D8)
+            embed = discord.Embed(title=_("Now playing"), description=f"[{song.name}]({song.video_url}) [{self.ctx.author.mention}]", color=0xCFA2D8)
             await self.ctx.send(embed=embed)
                            
         except Exception as e:
             print(f"Error on Discord player: {e}")
+            self.ctx.send(_("Error on Discord player: ") + e)
