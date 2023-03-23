@@ -9,7 +9,6 @@ openai_api.json
 .ppn
 *.pyc
 __pycache__/conch_voice.cpython-310.pyc
-
 __pycache__/conch_voice.cpython-310.pyc
 __pycache__/conch_voice.cpython-310.pyc
 pyporcupine_api.json
