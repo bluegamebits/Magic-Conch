@@ -129,22 +129,3 @@ class MusicPlayer:
                 await asyncio.sleep(1)
         return None
     
-    async def play_music(self, song):
-        """Plays the given source in the voice channel"""
-        print("Playing music")
-
-        try:
-            
-            vc = self.ctx.voice_client
-            try:
-                vc.play(
-                    song.source, after=lambda _: self.bot.loop.call_soon_threadsafe(self.next.set)
-                )
-            except asyncio.CancelledError:
-                print("Music canceled.")
-            embed = discord.Embed(title=_("Now playing"), description=f"[{song.name}]({song.video_url}) [{self.ctx.author.mention}]", color=0xCFA2D8)
-            await self.ctx.send(embed=embed)
-                           
-        except Exception as e:
-            print(f"Error on Discord player: {e}")
-            self.ctx.send(_("Error on Discord player: ") + e)
