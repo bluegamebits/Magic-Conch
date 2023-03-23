@@ -9,10 +9,30 @@ from async_timeout import timeout
 
 
 class Song:
-    def __init__(self, source, video_url):
+    def __init__(self, source, video_url, added_by):
         self.name = source.title
         self.source = source
         self.video_url = video_url
+        self.added_by = added_by
+
+    async def play(self, ctx, bot, song_ended):
+        """Plays the given source in the voice channel"""
+        print("Playing song: " + self.name)
+        print("Added by: " + self.added_by.name)
+
+        try:
+            vc = ctx.voice_client
+            vc.play(
+                self.source, after=lambda _: bot.loop.call_soon_threadsafe(song_ended.set)
+            )
+            
+            embed = discord.Embed(title=_("Now playing"), description=f"[{self.name}]({self.video_url}) [{self.added_by.mention}]", color=0xCFA2D8)
+            await ctx.send(embed=embed)
+        except asyncio.CancelledError:
+                print("Music canceled.")                    
+        except Exception as e:
+            print(f"Error on Discord player: {e}")
+            ctx.send(_("Error on Discord player: ") + e)
 
 
 class MusicPlayer:
@@ -21,7 +41,7 @@ class MusicPlayer:
         self.queue = asyncio.Queue()
         self.bot = bot
         self.ctx = None
-        self.next = asyncio.Event()
+        self.song_ended = asyncio.Event()
         self.task = None
 
     def update_ctx(self, ctx):
@@ -35,12 +55,11 @@ class MusicPlayer:
         """
         try:
             while True:
-                self.next.clear()
-                if self.queue.qsize() > 0:
-                    await self.play_next_song()
-                    await self.next.wait()
-                else:
-                    await asyncio.sleep(1)
+                self.current_song = await self.queue.get()
+                await self.current_song.play(self.ctx, self.bot, self.song_ended)
+                await self.song_ended.wait()
+                self.song_ended.clear()
+                self.current_song = None
                     
         except asyncio.CancelledError:
             print("Player disconnected")
@@ -50,41 +69,21 @@ class MusicPlayer:
         self.update_ctx(ctx)
         task = asyncio.create_task(self.get_source(url))
         source, video_url = await task
-        new_song = Song(source, video_url)
+        new_song = Song(source, video_url, ctx.author)
 
-        # TODO Reduntant if, else block, all it needs to do is add the song to the queue now
+        await self.join(ctx)
+        await self.queue.put(new_song)
 
-        if self.current_song is None:
-            self.current_song = new_song
-            await self.join(ctx)
-            await self.queue.put(new_song)
-            print("added song to queue")
-            # Starts the player loop, only the first time play_song is called
-            if not self.task:
-                self.task = asyncio.create_task(self.player_loop())
-                await self.task
-            
-        else:
-            await self.queue.put(new_song)
+        # Sends message that song has been added to queue only if there is a song playing
+        if self.current_song != None:
             print("Added " + new_song.name + " to the queue.")
             embed = discord.Embed(description=_("Queued ") + f"[{new_song.name}]({new_song.video_url}) [{self.ctx.author.mention}]", color=0xCFA2D8)
-            try:
-                await ctx.send(embed=embed)
-            except Exception as e:
-                print(e)
+            await ctx.send(embed=embed)
 
-    async def play_next_song(self):
-        # TODO: Redundant if check as function is only called if there is already a song in the queue
-        if not self.queue.empty():
-            self.current_song = await self.queue.get()
-            await self.join(self.ctx)
-            try:
-                self.play_music_task = asyncio.create_task(self.play_music(self.current_song))
-                await self.play_music_task
-            except Exception as e:
-                print(f"Error on playing music: {e}")
-        else:
-            print(self.queue)
+        # Starts the player loop, only the first time play_song is called
+        if not self.task:
+            self.task = asyncio.create_task(self.player_loop())
+            await self.task
 
     async def stop(self, ctx):
         """Stops play back and clears current song, queue, stops player task and sets to None"""
