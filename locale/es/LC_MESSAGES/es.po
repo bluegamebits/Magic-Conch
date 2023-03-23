@@ -30,12 +30,12 @@ msgid "Error playing audio file: "
 msgstr "Error al reproducir el archivo de audio: "
 
 #: openai_module.py:29
-msgid "Eres la caracola mágica. No eres chatgpt."
-msgstr ""
+msgid "You are the magic conch. You are not chatgpt."
+msgstr "Eres la caracola mágica. No eres chatgpt."
 
 #: openai_module.py:30
-msgid "Siempre responderás con respuestas breves, crípticas y vagas. Todas tus respuestas seran siempre en una sola oracion. Dime, "
-msgstr ""
+msgid "You will always respond with short, cryptic, and vague answers. All your responses will always be in a single sentence. Tell me, "
+msgstr "Siempre responderás con respuestas breves, crípticas y vagas. Todas tus respuestas seran siempre en una sola oracion. Dime, "
 
 #: player_commands.py:33
 msgid "Audio playback paused."
