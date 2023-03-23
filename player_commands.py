@@ -49,9 +49,7 @@ class PlayerCommands(commands.Cog):
         """Stops and disconnects the bot from voice"""
         vc = ctx.voice_client
         if vc and vc.is_connected():
-            await vc.disconnect()
-            await ctx.send(_("Disconnected from voice channel"))
-            await self.player.stop()
+            await self.player.stop(ctx)
         else:
             await ctx.send(_("Not currently connected to a voice channel"))
 
@@ -59,7 +57,7 @@ class PlayerCommands(commands.Cog):
     async def skip(self, ctx):
         """Skips the current song"""
         if ctx.voice_client.is_connected():
-            await self.player.skip()
+            await self.player.skip(ctx)
             await ctx.send(_("Skipped song"))
         else:
             await ctx.send(_("Not currently connected to a voice channel"))

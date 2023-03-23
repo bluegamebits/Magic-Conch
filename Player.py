@@ -63,15 +63,21 @@ class MusicPlayer:
                     
         except asyncio.CancelledError:
             print("Player disconnected")
-                
+            await self.ctx.voice_client.disconnect()
+
+        finally:
+            await self.ctx.voice_client.disconnect()
 
     async def play_song(self, ctx, url):
-        self.update_ctx(ctx)
+        if not (await self.join(ctx)):
+            print("Not true")
+            return 
+        
         task = asyncio.create_task(self.get_source(url))
         source, video_url = await task
         new_song = Song(source, video_url, ctx.author)
 
-        await self.join(ctx)
+        
         await self.queue.put(new_song)
 
         # Sends message that song has been added to queue only if there is a song playing
@@ -87,34 +93,44 @@ class MusicPlayer:
 
     async def stop(self, ctx):
         """Stops play back and clears current song, queue, stops player task and sets to None"""
-        self.update_ctx(ctx)
+        
         if(ctx.voice_client.is_connected()):
             self.current_song = None
             self.queue = asyncio.Queue()
             self.task.cancel()
             await self.task
             self.task = None
+            await ctx.send(_("Disconnected from voice channel"))
             print("Stopped playback and cleared queue.")
         else:
             await ctx.send(_("Not playing any music."))
-
+            
     async def skip(self, ctx):
-        self.update_ctx(ctx)
         if(ctx.voice_client.is_connected()):
-            self.play_music_task.cancel()
             self.ctx.voice_client.stop()
         else:
             await ctx.send(_("Not playing any music."))
 
     async def join(self, ctx):
         """Joins the voice channel of whoever called the command"""
-        self.update_ctx(ctx)
-        voice_channel = ctx.author.voice.channel
+        try:
+            voice_channel = ctx.author.voice.channel 
+            #vc = ctx.voice_client
+            #vc and vc.is_connected():
+            
+        except Exception as e:
+            print("Not conencted to a voice channel.")
+            if(ctx.voice_client is None):
+                return False
+            else:
+                return True
         
+        self.update_ctx(ctx)
         if ctx.voice_client is not None:
-            return await ctx.voice_client.move_to(voice_channel)
-
-        await voice_channel.connect()
+            await ctx.voice_client.move_to(voice_channel)
+        else:
+            await voice_channel.connect()
+        return voice_channel
 
     async def get_source(self, url):
         """Retrieves source from url or search"""
@@ -128,4 +144,3 @@ class MusicPlayer:
                 print(f"Retrying... (attempt {i+1}/10)")
                 await asyncio.sleep(1)
         return None
-    
