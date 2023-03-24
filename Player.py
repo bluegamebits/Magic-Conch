@@ -70,7 +70,6 @@ class MusicPlayer:
 
     async def play_song(self, ctx, url):
         if not (await self.join(ctx)):
-            print("Not true")
             return 
         
         task = asyncio.create_task(self.get_source(url))
@@ -104,7 +103,7 @@ class MusicPlayer:
             print("Stopped playback and cleared queue.")
         else:
             await ctx.send(_("Not playing any music."))
-            
+
     async def skip(self, ctx):
         if(ctx.voice_client.is_connected()):
             self.ctx.voice_client.stop()
@@ -119,8 +118,8 @@ class MusicPlayer:
             #vc and vc.is_connected():
             
         except Exception as e:
-            print("Not conencted to a voice channel.")
             if(ctx.voice_client is None):
+                await ctx.send(_("Error: Voice client is not connected."))
                 return False
             else:
                 return True
