@@ -88,7 +88,6 @@ class MusicPlayer:
         # Starts the player loop, only the first time play_song is called
         if not self.task:
             self.task = asyncio.create_task(self.player_loop())
-            await self.task
 
     async def stop(self, ctx):
         """Stops play back and clears current song, queue, stops player task and sets to None"""
