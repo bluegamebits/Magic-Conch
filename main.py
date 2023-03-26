@@ -17,13 +17,16 @@ intents.members = True
 
 # Define bot variable and activity type
 bot = commands.Bot(
-    command_prefix='.',
+    command_prefix=',',
     description=_("Magic conch bot"),
     intents=intents,
-    #activity = discord.Activity(type=discord.ActivityType.listening, name='',)
+    activity = discord.Activity(type=discord.ActivityType.streaming, name='RIP Chabelo',)
 )
 
-
+async def setup_bot():
+    await bot.load_extension("player_commands")
+    await bot.load_extension("listener")
+    await bot.load_extension("conch_voice")
 
 async def main():
     """Load the 'youtube_player' extension, and start the bot using the Discord bot token from the 'Discord_bot_tokens' environment variable.
@@ -32,20 +35,21 @@ async def main():
         KeyError: If the 'Discord_bot_tokens' environment variable is not set.
     """
     async with bot:
-        await bot.load_extension("player_commands")
-        await bot.load_extension("listener")
-        await bot.load_extension("conch_voice")
-        await bot.start(os.environ['Discord_bot_tokens'])
+        await setup_bot() 
+        await bot.start(os.environ['discord2_bot_tokens'])
         
-try:
-    asyncio.run(main())
-finally:
-    # TODO Currently there could be a lot of downloaded .webm files saved to the local folder, below is a 
-    # Short term solution until I fix streaming 
 
-    # Removes any downloaded .webm and .mp3 files after program ends
-    current_path = os.getcwd()
-    for filename in os.listdir(current_path):
-        if filename.endswith('.webm') or filename.endswith('.mp3') or filename.endswith('.m4a'):
-            file_path = os.path.join(current_path, filename)
-            os.remove(file_path)
+
+if __name__ == "__main__":
+    try:
+        asyncio.run(main())
+    finally:
+        # TODO Currently there could be a lot of downloaded .webm files saved to the local folder, below is a 
+        # Short term solution until I fix streaming 
+
+        # Removes any downloaded .webm and .mp3 files after program ends
+        current_path = os.getcwd()
+        for filename in os.listdir(current_path):
+            if filename.endswith('.webm') or filename.endswith('.mp3') or filename.endswith('.m4a'):
+                file_path = os.path.join(current_path, filename)
+                os.remove(file_path)

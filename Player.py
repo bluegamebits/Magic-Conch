@@ -72,7 +72,7 @@ class MusicPlayer:
         if not (await self.join(ctx)):
             return 
         
-        task = asyncio.create_task(self.get_source(url))
+        task = asyncio.create_task(self._get_source(url))
         source, video_url = await task
         new_song = Song(source, video_url, ctx.author)
 
@@ -89,26 +89,6 @@ class MusicPlayer:
         if not self.task:
             self.task = asyncio.create_task(self.player_loop())
             await self.task
-
-    async def stop(self, ctx):
-        """Stops play back and clears current song, queue, stops player task and sets to None"""
-        
-        if(ctx.voice_client.is_connected()):
-            self.current_song = None
-            self.queue = asyncio.Queue()
-            self.task.cancel()
-            await self.task
-            self.task = None
-            await ctx.send(_("Disconnected from voice channel"))
-            print("Stopped playback and cleared queue.")
-        else:
-            await ctx.send(_("Not playing any music."))
-
-    async def skip(self, ctx):
-        if(ctx.voice_client.is_connected()):
-            self.ctx.voice_client.stop()
-        else:
-            await ctx.send(_("Not playing any music."))
 
     async def join(self, ctx):
         """Joins the voice channel of whoever called the command"""
@@ -131,7 +111,57 @@ class MusicPlayer:
             await voice_channel.connect()
         return voice_channel
 
-    async def get_source(self, url):
+    async def pause(self, ctx):
+        """Pauses the current audio playback"""
+        if ctx.voice_client.is_playing():
+            ctx.voice_client.pause()
+            await ctx.send(_("Audio playback paused."))
+        else:
+            await ctx.send(_("No audio is currently playing."))
+
+    async def unpause(self, ctx):
+        """Unpauses the currently playing audio"""
+        vc = ctx.voice_client
+        if vc and vc.is_paused():
+            vc.resume()
+            await ctx.send(_("Audio playback resumed"))
+        else:
+            await ctx.send(_("Audio playback is not paused"))
+
+    async def stop(self, ctx):
+        """Stops and disconnects the bot from voice"""
+        vc = ctx.voice_client
+        if vc and vc.is_connected():
+            self.current_song = None
+            self.queue = asyncio.Queue()
+            self.task.cancel()
+            await self.task
+            self.task = None
+            await ctx.send(_("Disconnected from voice channel"))
+            print("Stopped playback and cleared queue.")
+        else:
+            await ctx.send(_("Not playing any music."))
+
+    async def skip(self, ctx):
+        """Skips the current song"""
+        if ctx.voice_client.is_connected():
+            await self.player.skip(ctx)
+            await ctx.send(_("Skipped song"))
+        else:
+            await ctx.send(_("Not currently connected to a voice channel"))
+
+    async def volume(self, ctx, volume: int):
+        """Changes the player's volume"""
+        if ctx.voice_client is None:
+            return await ctx.send(_("Not currently connected to a voice channel"))
+
+        ctx.voice_client.source.volume = volume / 100
+        await ctx.send(_("Volume changed to ") + volume + "%")
+
+    async def ping(self, ctx):
+         await ctx.send('Pong! {0}'.format(round(self.bot.latency, 1)))
+
+    async def _get_source(self, url):
         """Retrieves source from url or search"""
         print("Getting source")
         for i in range(10):
