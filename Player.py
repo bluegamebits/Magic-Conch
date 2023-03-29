@@ -46,8 +46,10 @@ class MusicPlayer:
         """
         try:
             self.song_ended.clear()
+            self.player_volume = 0.5
             while True:
                 self.current_song = await self.queue.get()
+                self.current_song.source.volume = self.player_volume
                 await self.current_song.play(self.ctx, self.bot, self.song_ended)
                 await self.song_ended.wait()
                 self.song_ended.clear()
@@ -154,6 +156,7 @@ class MusicPlayer:
         vc = ctx.voice_client
         if vc and vc.source and vc.is_connected():
             vc.source.volume = volume / 100
+            self.player_volume = volume / 100
             await ctx.send(_("Volume changed to ") + str(volume) + "%")
         else:
             await ctx.send(_("No audio is currently playing."))
