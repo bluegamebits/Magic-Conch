@@ -1,7 +1,7 @@
 import discord
-import youtube_dl
+from yt_dlp import YoutubeDL
+import aiohttp
 import asyncio
-from requests import get
 
 ytdl_format_options = {
     "format": "bestaudio/best",
@@ -23,7 +23,7 @@ ytdl_format_options = {
 ffmpeg_options = {'before_options': '-reconnect 1 -reconnect_streamed 1 -reconnect_delay_max 5',
                   "options": "-vn"}
 
-ytdl = youtube_dl.YoutubeDL(ytdl_format_options)
+ytdl = YoutubeDL(ytdl_format_options)
 
 class YTDLSource(discord.PCMVolumeTransformer):
     def __init__(self, source, *, data, volume=0.5):
@@ -41,19 +41,25 @@ class YTDLSource(discord.PCMVolumeTransformer):
         # serches for video if not a link and chooses the first result, if it is a link it just passes it to youtube-dl to download
 
         # TODO: Implement choosing between multiple search results
-        try:
-            await get(url)
-        except:
-            data = await loop.run_in_executor(
-                None, lambda: ytdl.extract_info(f"ytsearch:{url}", download=False)['entries'][0]
-            )
-            video_url = f"https://www.youtube.com/watch?v={data['id']}"
+
+        async def fetch_url(session, url):
+            async with session.get(url) as response:
+                return await response.text()
+            
+        async with aiohttp.ClientSession() as session:        
+            try:
+                await fetch_url(session, url)
+            except:
+                data = await loop.run_in_executor(
+                    None, lambda: ytdl.extract_info(f"ytsearch:{url}", download=False)['entries'][0]
+                )
+                video_url = f"https://www.youtube.com/watch?v={data['id']}"
         
-        else:
-            data = await loop.run_in_executor(
-                None, lambda: ytdl.extract_info(url, download=False)
-            )
-            video_url = f"https://www.youtube.com/watch?v={data['id']}"
+            else:
+                data = await loop.run_in_executor(
+                    None, lambda: ytdl.extract_info(url, download=False)
+                )
+                video_url = f"https://www.youtube.com/watch?v={data['id']}"
 
         if "entries" in data:
             # Takes the first item from a playlist
