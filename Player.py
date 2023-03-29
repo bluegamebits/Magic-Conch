@@ -7,7 +7,6 @@ import discord
 
 from async_timeout import timeout
 
-
 class Song:
     def __init__(self, source, video_url, added_by):
         self.name = source.title
@@ -20,20 +19,13 @@ class Song:
         print("Playing song: " + self.name)
         print("Added by: " + self.added_by.name)
 
-        try:
-            vc = ctx.voice_client
-            vc.play(
-                self.source, after=lambda _: bot.loop.call_soon_threadsafe(song_ended.set)
-            )
-            
-            embed = discord.Embed(title=_("Now playing"), description=f"[{self.name}]({self.video_url}) [{self.added_by.mention}]", color=0xCFA2D8)
-            await ctx.send(embed=embed)
-        except asyncio.CancelledError:
-                print("Music canceled.")                    
-        except Exception as e:
-            print(f"Error on Discord player: {e}")
-            ctx.send(_("Error on Discord player: ") + e)
-
+        vc = ctx.voice_client
+        vc.play(
+            self.source, after=lambda _: bot.loop.call_soon_threadsafe(song_ended.set)
+        )
+        
+        embed = discord.Embed(title=_("Now playing"), description=f"[{self.name}]({self.video_url}) [{self.added_by.mention}]", color=0xCFA2D8)
+        await ctx.send(embed=embed)
 
 class MusicPlayer:
     def __init__(self, bot):
@@ -44,16 +36,16 @@ class MusicPlayer:
         self.song_ended = asyncio.Event()
         self.task = None
 
-    def update_ctx(self, ctx):
+    async def update_ctx(self, ctx):
         self.ctx = ctx
-
 
     async def player_loop(self):
         """
         Main player loop
-        Plays song when it detect the queue has at least one item
+        Plays song when it detects the queue has at least one item
         """
         try:
+            self.song_ended.clear()
             while True:
                 self.current_song = await self.queue.get()
                 await self.current_song.play(self.ctx, self.bot, self.song_ended)
@@ -62,11 +54,11 @@ class MusicPlayer:
                 self.current_song = None
                     
         except asyncio.CancelledError:
-            print("Player disconnected")
-            await self.ctx.voice_client.disconnect()
-
-        finally:
-            await self.ctx.voice_client.disconnect()
+            try:    
+                await self.ctx.voice_client.disconnect()
+                await self.ctx.voice_client.voice_disconnect()
+            except Exception as e:
+                pass
 
     async def play_song(self, ctx, url):
         if not (await self.join(ctx)):
@@ -78,7 +70,6 @@ class MusicPlayer:
 
         
         await self.queue.put(new_song)
-
         # Sends message that song has been added to queue only if there is a song playing
         if self.current_song != None:
             print("Added " + new_song.name + " to the queue.")
@@ -88,31 +79,34 @@ class MusicPlayer:
         # Starts the player loop, only the first time play_song is called
         if not self.task:
             self.task = asyncio.create_task(self.player_loop())
-            await self.task
-
+            
     async def join(self, ctx):
         """Joins the voice channel of whoever called the command"""
         try:
             voice_channel = ctx.author.voice.channel 
-            #vc = ctx.voice_client
-            #vc and vc.is_connected():
             
         except Exception as e:
-            if(ctx.voice_client is None):
-                await ctx.send(_("Error: Voice client is not connected."))
-                return False
-            else:
-                return True
+            await ctx.send(_("Error: Voice client is not connected."))
+            return False
         
-        self.update_ctx(ctx)
-        if ctx.voice_client is not None:
-            await ctx.voice_client.move_to(voice_channel)
-        else:
-            await voice_channel.connect()
-        return voice_channel
+        try:
+            if ctx.voice_client is not None:
+                await self.update_ctx(ctx)
+                await ctx.voice_client.move_to(voice_channel)
+
+            else:
+                await self.update_ctx(ctx)
+                await voice_channel.connect()
+        except Exception as e:
+            return False
+        return True
 
     async def pause(self, ctx):
         """Pauses the current audio playback"""
+        if(ctx.voice_client is None):
+            await ctx.send(_("Error: Voice client is not connected."))
+            return
+        
         if ctx.voice_client.is_playing():
             ctx.voice_client.pause()
             await ctx.send(_("Audio playback paused."))
@@ -126,40 +120,43 @@ class MusicPlayer:
             vc.resume()
             await ctx.send(_("Audio playback resumed"))
         else:
-            await ctx.send(_("Audio playback is not paused"))
+            await ctx.send(_("No audio is currently playing."))
 
     async def stop(self, ctx):
         """Stops and disconnects the bot from voice"""
         vc = ctx.voice_client
-        if vc and vc.is_connected():
+        self.current_song = None
+        if vc and vc.is_connected() and self.task:
+            
             self.current_song = None
             self.queue = asyncio.Queue()
             self.task.cancel()
             await self.task
             self.task = None
-            await ctx.send(_("Disconnected from voice channel"))
-            print("Stopped playback and cleared queue.")
+        elif vc and vc.is_connected():
+            await vc.voice_disconnect()
+            await vc.disconnect()
         else:
-            await ctx.send(_("Not playing any music."))
+            await ctx.send(_("Error: Voice client is not connected."))
 
     async def skip(self, ctx):
         """Skips the current song"""
-        if ctx.voice_client.is_connected():
-            await self.player.skip(ctx)
+        vc = ctx.voice_client
+        #try:
+        if vc and vc.is_connected() and self.current_song:
+            vc.stop()
             await ctx.send(_("Skipped song"))
         else:
-            await ctx.send(_("Not currently connected to a voice channel"))
+            await ctx.send(_("Error: Voice client is not connected."))
 
     async def volume(self, ctx, volume: int):
         """Changes the player's volume"""
-        if ctx.voice_client is None:
-            return await ctx.send(_("Not currently connected to a voice channel"))
-
-        ctx.voice_client.source.volume = volume / 100
-        await ctx.send(_("Volume changed to ") + volume + "%")
-
-    async def ping(self, ctx):
-         await ctx.send('Pong! {0}'.format(round(self.bot.latency, 1)))
+        vc = ctx.voice_client
+        if vc and vc.source and vc.is_connected():
+            vc.source.volume = volume / 100
+            await ctx.send(_("Volume changed to ") + str(volume) + "%")
+        else:
+            await ctx.send(_("No audio is currently playing."))
 
     async def _get_source(self, url):
         """Retrieves source from url or search"""

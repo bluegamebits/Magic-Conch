@@ -37,16 +37,17 @@ class PlayerCommands(commands.Cog):
 
     @commands.command()
     async def volume(self, ctx, volume: int):
-        self.player.volume(ctx, volume)
-
-    @commands.command()
-    async def ping(self, ctx):
-        self.player.ping()
+        await self.player.volume(ctx, volume)
 
     @commands.Cog.listener()
     async def on_message(self, message):
-        print(message)
-        self.botctx = await self.bot.get_context(message)
+        """
+        Listens to bot messages and updates player.ctx
+        Used only for testing purpouses
+        """
+        if not message.author.bot:  # Ignore non-bot messages
+            return
+        self.player.ctx =  await self.bot.get_context(message)
         
 async def setup(bot):
     await bot.add_cog(PlayerCommands(bot))
