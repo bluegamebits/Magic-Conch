@@ -1,4 +1,4 @@
-import main
+
 import pytest
 import asyncio
 import pytest_asyncio
@@ -7,6 +7,10 @@ from unittest.mock import AsyncMock, MagicMock
 from unittest import mock
 from discord.ext.commands import Context
 import discord
+import sys
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import main
 
 
 import bot_test
