@@ -161,7 +161,7 @@ class MusicPlayer:
         """Skips the current song"""
         vc = ctx.voice_client
         #try:
-        if vc and vc.is_connected() and self.current_song:
+        if vc and vc.is_playing() or vc and vc.is_paused():
             vc.stop()
             await ctx.send(_("Skipped song"))
         else:

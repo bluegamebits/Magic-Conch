@@ -120,6 +120,7 @@ async def test_song_types(bots_setup):
     guild = bot_test.bot.get_guild(TEST_GUILD_ID)
     text_channel: TextChannel = guild.text_channels[2]
     ctx, test_vc, player = await join_bots_to_vc()
+
     print("Testing video search term")
     song_loop = asyncio.create_task(player.play_song(ctx, "The Legend of Zelda: Breath of the Wild - Theme (SoundTrack)"))
     vc = ctx.voice_client
@@ -128,7 +129,7 @@ async def test_song_types(bots_setup):
     await asyncio.sleep(2)
     await player.skip(ctx)
     
-   
+
     print("Testing single video watch link")
     song_loop = asyncio.create_task(player.play_song(ctx, "https://www.youtube.com/watch?v=cPWBG6_jn4Y"))
     vc = ctx.voice_client
@@ -160,16 +161,17 @@ async def test_song_types(bots_setup):
     queue_size = await player.purge_queue(ctx)
     response_msg = await response_msg
     assert response_msg.content == f"{queue_size} songs have been removed from the queue." 
-    await asyncio.sleep(100)
+    queue_size = await player.purge_queue(ctx)
+    await player.skip(ctx) 
+    await asyncio.sleep(5)
     
-    # TODO: Fix streaming youtube links
-    #print("Testing stream link")
-    #song_loop = asyncio.create_task(player.play_song(ctx, "https://www.youtube.com/watch?v=jfKfPfyJRdk"))
-    #vc = ctx.voice_client
-    #await wait_for_song_to_start(vc, 10)
-    #assert vc.is_playing()
-    #await asyncio.sleep(2)
-    #await player.skip(ctx)
+    print("Testing stream link")
+    song_loop = asyncio.create_task(player.play_song(ctx, "https://www.youtube.com/watch?v=jfKfPfyJRdk"))
+    vc = ctx.voice_client
+    await wait_for_song_to_start(vc, 10)
+    assert vc.is_playing()
+    await asyncio.sleep(2)
+    await player.skip(ctx)
 
     await _cleanup_vc(player, test_vc, ctx)
 

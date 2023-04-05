@@ -20,7 +20,7 @@ bot = commands.Bot(
     command_prefix=',',
     description=_("Magic conch bot"),
     intents=intents,
-    activity = discord.Activity(type=discord.ActivityType.streaming, name='RIP Chabelo',)
+    activity = discord.Activity(type=discord.ActivityType.playing, name='Ask me questions with a .',)
 )
 
 async def setup_bot():
