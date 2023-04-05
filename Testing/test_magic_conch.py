@@ -77,7 +77,7 @@ async def wait_for_message(channel, timeout=5):
 async def wait_for_song_to_start(vc, timeout):
     seconds = 0
     try:
-        while not (vc.is_playing() or vc is None):
+        while not (vc.is_playing()):
             await asyncio.sleep(1)
             if(seconds>timeout):
                 break
@@ -147,6 +147,8 @@ async def test_song_types(bots_setup):
     queue_size = await player.purge_queue(ctx)
     response_msg = await response_msg
     assert response_msg.content == f"{queue_size} songs have been removed from the queue."
+    await player.skip(ctx) 
+    await asyncio.sleep(5)
     
     print("Testing playlist playlist link")
     song_loop = asyncio.create_task(player.play_song(ctx, "https://www.youtube.com/playlist?list=PLh4Eme5gACZEAazTK1vSZn3DCYJLQ4YHH"))
@@ -157,7 +159,8 @@ async def test_song_types(bots_setup):
     response_msg = asyncio.create_task(wait_for_message(text_channel, timeout=5))
     queue_size = await player.purge_queue(ctx)
     response_msg = await response_msg
-    assert response_msg.content == f"{queue_size} songs have been removed from the queue."
+    assert response_msg.content == f"{queue_size} songs have been removed from the queue." 
+    await asyncio.sleep(100)
     
     # TODO: Fix streaming youtube links
     #print("Testing stream link")
@@ -176,13 +179,16 @@ async def test_commands_while_song_playing(bots_setup):
     guild = bot_test.bot.get_guild(TEST_GUILD_ID)
     text_channel: TextChannel = guild.text_channels[2]
     ctx, test_vc, player = await join_bots_to_vc()
-    
+
+    response_msg = asyncio.create_task(wait_for_message(text_channel, timeout=5))
     await player.play_song(ctx, "Neon Genesis Evangelion — FLY ME TO THE MOON — CLAIRE (ED Ending Full NGE OST Soundtrack Lyrics")
     vc = ctx.voice_client
-    
     await wait_for_song_to_start(vc, 10)
-        
     assert vc.is_playing()
+    response_msg = await response_msg
+    assert response_msg.embeds[0].title == _("Now playing")
+    assert response_msg.embeds[0].description ==  "[Neon Genesis Evangelion — FLY ME TO THE MOON — CLAIRE (ED Ending Full NGE OST Soundtrack Lyrics)](https://www.youtube.com/watch?v=Ixi0sUpLVRc) [<@1089295072782188585>]"
+
 
     response_msg = asyncio.create_task(wait_for_message(text_channel, timeout=5))
     await player.join(ctx) 
@@ -341,15 +347,15 @@ async def test_get_source(bots_setup):
     url_search_term = "rick astley - never gonna give you up (official music video)"
     url_direct_link = "https://www.youtube.com/watch?v=Ixi0sUpLVRc"
 
-    source, video = await player._get_source(url_search_term)
+    url, song_title = await player._get_source(url_search_term)
     url_search_title = "Rick Astley - Never Gonna Give You Up (Official Music Video)"
     url_search_link = "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
 
-    assert source.title == url_search_title and video == url_search_link
+    assert song_title == url_search_title and url == url_search_link
 
     url_direct_link_title = "Neon Genesis Evangelion — FLY ME TO THE MOON — CLAIRE (ED Ending Full NGE OST Soundtrack Lyrics)"
-    source, video = await player._get_source(url_direct_link)
-    assert source.title == url_direct_link_title and video == url_direct_link
+    url, song_title = await player._get_source(url_direct_link)
+    assert song_title == url_direct_link_title and url == url_direct_link
 
 @pytest.mark.asyncio
 async def test_commands_while_not_in_voice_channel(bots_setup):
