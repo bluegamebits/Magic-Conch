@@ -61,8 +61,8 @@ class MusicPlayer:
                 await self.song_ended.wait()
                 if self.current_song:
                     await self.finished_queue.put(self.current_song)
+                    self.current_song = None
                 self.song_ended.clear()
-                self.current_song = None
                     
         except asyncio.CancelledError:
             try:    
@@ -176,7 +176,6 @@ class MusicPlayer:
         """Plays previous song and puts current song in queue"""
         if(self.finished_queue.qsize() < 1):
             return
-        
         temp_list = []
         while not self.finished_queue.empty():
             try:
@@ -194,8 +193,10 @@ class MusicPlayer:
                 temp_list.append(self.queue.get_nowait())
             except asyncio.QueueEmpty:
                 break
+        
         temp_list.insert(0, previous_song)
-        temp_list.insert(1, self.current_song)
+        if(self.current_song):
+            temp_list.insert(1, self.current_song)
         for song in temp_list:
             await self.queue.put(song)
 
