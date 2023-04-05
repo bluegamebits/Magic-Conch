@@ -76,13 +76,16 @@ async def wait_for_message(channel, timeout=5):
     
 async def wait_for_song_to_start(vc, timeout):
     seconds = 0
-    while not (vc.is_playing()):
-        await asyncio.sleep(1)
-        if(seconds>timeout):
-            break
-        seconds += 1
-    if not (vc.is_playing()):
-        print("ERROR, VC TIMEOUT")
+    try:
+        while not (vc.is_playing() or vc is None):
+            await asyncio.sleep(1)
+            if(seconds>timeout):
+                break
+            seconds += 1
+        if not (vc.is_playing()):
+            print("ERROR, VC TIMEOUT")
+    except Exception as e:
+        print(e)
 async def _cleanup_vc(player_commands_cog, test_vc, ctx):
 
     #if(ctx.voice_client.is_playing() or ctx.voice_client.is_paused()):
@@ -111,6 +114,61 @@ async def join_bots_to_vc():
     await player.join(ctx)
     print("after cog join") 
     return ctx, test_vc, player
+@pytest.mark.asyncio
+async def test_song_types(bots_setup):
+    # Search term
+    guild = bot_test.bot.get_guild(TEST_GUILD_ID)
+    text_channel: TextChannel = guild.text_channels[2]
+    ctx, test_vc, player = await join_bots_to_vc()
+    print("Testing video search term")
+    song_loop = asyncio.create_task(player.play_song(ctx, "The Legend of Zelda: Breath of the Wild - Theme (SoundTrack)"))
+    vc = ctx.voice_client
+    await wait_for_song_to_start(vc, 10)
+    assert vc.is_playing()
+    await asyncio.sleep(2)
+    await player.skip(ctx)
+    
+   
+    print("Testing single video watch link")
+    song_loop = asyncio.create_task(player.play_song(ctx, "https://www.youtube.com/watch?v=cPWBG6_jn4Y"))
+    vc = ctx.voice_client
+    await wait_for_song_to_start(vc, 10)
+    assert vc.is_playing()
+    await asyncio.sleep(2)
+    await player.skip(ctx)
+    
+    print("Testing playlist watch link")
+    song_loop = asyncio.create_task(player.play_song(ctx, "https://www.youtube.com/watch?v=xGi23M_5lXg&list=PLh4Eme5gACZEAazTK1vSZn3DCYJLQ4YHH"))
+    vc = ctx.voice_client
+    await wait_for_song_to_start(vc, 100)
+    assert vc.is_playing()
+    await asyncio.sleep(2)
+    response_msg = asyncio.create_task(wait_for_message(text_channel, timeout=5))
+    queue_size = await player.purge_queue(ctx)
+    response_msg = await response_msg
+    assert response_msg.content == f"{queue_size} songs have been removed from the queue."
+    
+    print("Testing playlist playlist link")
+    song_loop = asyncio.create_task(player.play_song(ctx, "https://www.youtube.com/playlist?list=PLh4Eme5gACZEAazTK1vSZn3DCYJLQ4YHH"))
+    vc = ctx.voice_client
+    await wait_for_song_to_start(vc, 10)
+    assert vc.is_playing()
+    await asyncio.sleep(2)
+    response_msg = asyncio.create_task(wait_for_message(text_channel, timeout=5))
+    queue_size = await player.purge_queue(ctx)
+    response_msg = await response_msg
+    assert response_msg.content == f"{queue_size} songs have been removed from the queue."
+    
+    # TODO: Fix streaming youtube links
+    #print("Testing stream link")
+    #song_loop = asyncio.create_task(player.play_song(ctx, "https://www.youtube.com/watch?v=jfKfPfyJRdk"))
+    #vc = ctx.voice_client
+    #await wait_for_song_to_start(vc, 10)
+    #assert vc.is_playing()
+    #await asyncio.sleep(2)
+    #await player.skip(ctx)
+
+    await _cleanup_vc(player, test_vc, ctx)
 
 
 @pytest.mark.asyncio

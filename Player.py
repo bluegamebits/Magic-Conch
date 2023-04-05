@@ -8,29 +8,35 @@ import discord
 from async_timeout import timeout
 
 class Song:
-    def __init__(self, source, video_url, added_by):
-        self.name = source.title
-        self.source = source
+    def __init__(self, video_url, song_title, added_by):
+        self.name = song_title
         self.video_url = video_url
         self.added_by = added_by
 
-    async def play(self, ctx, bot, song_ended):
+    async def play(self, ctx, bot, song_ended, volume):
         """Plays the given source in the voice channel"""
         print("Playing song: " + self.name)
         print("Added by: " + self.added_by.name)
 
         vc = ctx.voice_client
-        vc.play(
-            self.source, after=lambda _: bot.loop.call_soon_threadsafe(song_ended.set)
-        )
+        source = await youtube_downloader.YTDLSource.play_final(self.video_url)
+        if(source):
+            source.volume = volume
+            vc.play(
+                source, after=lambda _: bot.loop.call_soon_threadsafe(song_ended.set)
+            )
         
-        embed = discord.Embed(title=_("Now playing"), description=f"[{self.name}]({self.video_url}) [{self.added_by.mention}]", color=0xCFA2D8)
-        await ctx.send(embed=embed)
+            embed = discord.Embed(title=_("Now playing"), description=f"[{self.name}]({self.video_url}) [{self.added_by.mention}]", color=0xCFA2D8)
+            await ctx.send(embed=embed)
+        else:
+            print("No source")
+            bot.loop.call_soon_threadsafe(song_ended.set)
 
 class MusicPlayer:
     def __init__(self, bot):
         self.current_song = None
         self.queue = asyncio.Queue()
+        self.finished_queue = asyncio.Queue()
         self.bot = bot
         self.ctx = None
         self.song_ended = asyncio.Event()
@@ -46,11 +52,11 @@ class MusicPlayer:
         """
         try:
             self.song_ended.clear()
-            self.player_volume = 0.5
+            self.player_volume = 0.5    
             while True:
+                print("loopy loop start")
                 self.current_song = await self.queue.get()
-                self.current_song.source.volume = self.player_volume
-                await self.current_song.play(self.ctx, self.bot, self.song_ended)
+                await self.current_song.play(self.ctx, self.bot, self.song_ended, self.player_volume)
                 await self.song_ended.wait()
                 self.song_ended.clear()
                 self.current_song = None
@@ -62,21 +68,31 @@ class MusicPlayer:
             except Exception as e:
                 pass
 
+    async def add_to_queue(self, ctx, source):
+        print(source)
+        if len(source) > 2:
+            num_of_songs = len(source) - 1 
+            embed = discord.Embed(description=_("Queued ") + f"{num_of_songs} canciones.", color=0xCFA2D8)
+            await ctx.send(embed=embed)
+            for video_url, song_title in source[1:]:
+                new_song = Song(video_url, song_title, ctx.author)
+                await self.queue.put(new_song)
+                
+        else:
+            video_url, song_title = source
+            new_song = Song(video_url, song_title, ctx.author)
+            await self.queue.put(new_song)
+            if self.current_song != None:
+                embed = discord.Embed(description=_("Queued ") + f"[{new_song.name}]({new_song.video_url}) [{self.ctx.author.mention}]", color=0xCFA2D8)
+                await ctx.send(embed=embed)
+
     async def play_song(self, ctx, url):
         if not (await self.join(ctx)):
             return 
         
         task = asyncio.create_task(self._get_source(url))
-        source, video_url = await task
-        new_song = Song(source, video_url, ctx.author)
-
-        
-        await self.queue.put(new_song)
-        # Sends message that song has been added to queue only if there is a song playing
-        if self.current_song != None:
-            print("Added " + new_song.name + " to the queue.")
-            embed = discord.Embed(description=_("Queued ") + f"[{new_song.name}]({new_song.video_url}) [{self.ctx.author.mention}]", color=0xCFA2D8)
-            await ctx.send(embed=embed)
+        source = await task
+        await self.add_to_queue(ctx, source)
 
         # Starts the player loop, only the first time play_song is called
         if not self.task:
@@ -151,6 +167,20 @@ class MusicPlayer:
         else:
             await ctx.send(_("Error: Voice client is not connected."))
 
+    async def purge_queue(self, ctx):
+        """Erases all songs from the queue"""
+        queue_size = self.queue.qsize()
+
+        while not self.queue.empty():
+            try:
+                item = self.queue.get_nowait()
+            except asyncio.QueueEmpty:
+                break
+    
+        self.current_song = None
+        await ctx.send(f"{queue_size} songs have been removed from the queue.")
+        return queue_size
+
     async def volume(self, ctx, volume: int):
         """Changes the player's volume"""
         vc = ctx.voice_client
@@ -165,11 +195,11 @@ class MusicPlayer:
         """Retrieves source from url or search"""
         print("Getting source")
         for i in range(10):
-            try:
-                source, video_url = await youtube_downloader.YTDLSource.from_url(url, loop=self.bot.loop, verbose=True)
-                return source, video_url
-            except Exception as e:
-                print(f"Failed to get source : {e}")
-                print(f"Retrying... (attempt {i+1}/10)")
-                await asyncio.sleep(1)
+
+            source = await youtube_downloader.YTDLSource.from_url(url, loop=self.bot.loop, verbose=True)
+            return source
+
+            print(f"Failed to get source : {e}")
+            print(f"Retrying... (attempt {i+1}/10)")
+            await asyncio.sleep(1)
         return None
