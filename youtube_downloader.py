@@ -92,7 +92,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
     async def play_final(cls, url, *, loop=None, stream=True, verbose=False):
         loop = loop or asyncio.get_event_loop()
         data = await loop.run_in_executor(
-                None, lambda: ytdl_info.extract_info(url, download=False)
+                None, lambda: ytdl_stream.extract_info(url, download=False)
             )
         # ℹ️ ydl.sanitize_info makes the info json-serializable
         data = ytdl_stream.sanitize_info(data)

@@ -35,6 +35,7 @@ class Song:
 class MusicPlayer:
     def __init__(self, bot):
         self.current_song = None
+        # TODO: Rewrite to use deque instead of asyncio
         self.queue = asyncio.Queue()
         self.finished_queue = asyncio.Queue()
         self.bot = bot
@@ -58,6 +59,8 @@ class MusicPlayer:
                 self.current_song = await self.queue.get()
                 await self.current_song.play(self.ctx, self.bot, self.song_ended, self.player_volume)
                 await self.song_ended.wait()
+                if self.current_song:
+                    await self.finished_queue.put(self.current_song)
                 self.song_ended.clear()
                 self.current_song = None
                     
@@ -157,15 +160,48 @@ class MusicPlayer:
         else:
             await ctx.send(_("Error: Voice client is not connected."))
 
-    async def skip(self, ctx):
+    async def skip(self, ctx, print_messages=True):
         """Skips the current song"""
         vc = ctx.voice_client
-        #try:
+        if not print_messages:
+            vc.stop()
+            return
         if vc and vc.is_playing() or vc and vc.is_paused():
             vc.stop()
             await ctx.send(_("Skipped song"))
         else:
             await ctx.send(_("Error: Voice client is not connected."))
+
+    async def play_previous_song(self, ctx):
+        """Plays previous song and puts current song in queue"""
+        if(self.finished_queue.qsize() < 1):
+            return
+        
+        temp_list = []
+        while not self.finished_queue.empty():
+            try:
+                temp_list.append(self.finished_queue.get_nowait())
+            except asyncio.QueueEmpty:
+                break
+
+        previous_song = temp_list.pop()
+        for song in temp_list:
+            await self.finished_queue.put(song)
+
+        temp_list = []
+        while not self.queue.empty():
+            try:
+                temp_list.append(self.queue.get_nowait())
+            except asyncio.QueueEmpty:
+                break
+        temp_list.insert(0, previous_song)
+        temp_list.insert(1, self.current_song)
+        for song in temp_list:
+            await self.queue.put(song)
+
+        self.current_song = None
+        await self.skip(ctx, print_messages=False)
+        
 
     async def purge_queue(self, ctx):
         """Erases all songs from the queue"""
@@ -178,7 +214,12 @@ class MusicPlayer:
                 break
     
         self.current_song = None
-        await ctx.send(f"{queue_size} songs have been removed from the queue.")
+        if queue_size == 1:
+            await ctx.send(f"{queue_size} song has been removed from the queue.")
+        elif queue_size > 1:
+            await ctx.send(f"{queue_size} songs have been removed from the queue.")
+        else:
+            await ctx.send(f"Queue is already empty.")
         return queue_size
 
     async def volume(self, ctx, volume: int):

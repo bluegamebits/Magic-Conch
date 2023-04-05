@@ -339,6 +339,13 @@ async def test_commands_while_joined_but_not_playing(bots_setup):
     response_msg = await response_msg
     assert response_msg == None
     assert main.bot.user.id not in [member.id for member in test_vc.channel.members]
+
+    response_msg = asyncio.create_task(wait_for_message(text_channel, timeout=5))
+    queue_size = await player.purge_queue(ctx) 
+    response_msg = await response_msg
+    assert response_msg.content == f"Queue is already empty."
+    assert main.bot.user.id not in [member.id for member in test_vc.channel.members]
+
     
     # Cleanup
     await _cleanup_vc(player, test_vc, ctx)
