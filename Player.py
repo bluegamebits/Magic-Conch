@@ -26,7 +26,7 @@ class Song:
                 source, after=lambda _: bot.loop.call_soon_threadsafe(song_ended.set)
             )
         
-            embed = discord.Embed(title=_("Now playing"), description=f"[{self.name}]({self.video_url}) [{self.added_by.mention}]", color=0xCFA2D8)
+            embed = discord.Embed(title=_("Now playing") + " [Autoplay]", description=f"[{self.name}]({self.video_url}) [{self.added_by.mention}]", color=0xCFA2D8)
             await ctx.send(embed=embed)
         else:
             print("No source")
@@ -42,6 +42,7 @@ class MusicPlayer:
         self.ctx = None
         self.song_ended = asyncio.Event()
         self.task = None
+        self.autoplay = False
 
     async def update_ctx(self, ctx):
         self.ctx = ctx
@@ -53,12 +54,16 @@ class MusicPlayer:
         """
         try:
             self.song_ended.clear()
-            self.player_volume = 0.5    
+            self.player_volume = 0.5  
             while True:
                 print("loopy loop start")
+                
                 self.current_song = await self.queue.get()
                 await self.current_song.play(self.ctx, self.bot, self.song_ended, self.player_volume)
                 await self.song_ended.wait()
+                if(self.autoplay and self.queue.qsize() == 0):
+                    video_url, song_title = await youtube_downloader.YTDLSource.get_recommended(self.current_song.video_url, self.finished_queue)
+                    await self.queue.put(Song(video_url, song_title, self.ctx.author))
                 if self.current_song:
                     await self.finished_queue.put(self.current_song)
                     self.current_song = None
@@ -71,7 +76,7 @@ class MusicPlayer:
             except Exception as e:
                 pass
 
-    async def add_to_queue(self, ctx, source):
+    async def _add_to_queue(self, ctx, source):
         print(source)
         if len(source) > 2:
             num_of_songs = len(source) - 1 
@@ -90,34 +95,46 @@ class MusicPlayer:
                 await ctx.send(embed=embed)
 
     async def play_song(self, ctx, url):
-        if not (await self.join(ctx)):
+        if not (await self.join(ctx, print_message=False)):
             return 
         
         task = asyncio.create_task(self._get_source(url))
         source = await task
-        await self.add_to_queue(ctx, source)
+        await self._add_to_queue(ctx, source)
 
         # Starts the player loop, only the first time play_song is called
         if not self.task:
             self.task = asyncio.create_task(self.player_loop())
-            
-    async def join(self, ctx):
+    async def set_autoplay(self, ctx, autoplay):
+        """Sets autoplay on or off"""
+        if autoplay.lower() == "on":
+           self.autoplay = True
+           await ctx.send("🎶 Autoplay on 🔁")
+        elif autoplay.lower() == "off":
+            self.autoplay = False
+            await ctx.send("🎶 Autoplay off 🚫")
+
+
+    async def join(self, ctx, print_message=True):
         """Joins the voice channel of whoever called the command"""
         try:
             voice_channel = ctx.author.voice.channel 
             
         except Exception as e:
-            await ctx.send(_("Error: Voice client is not connected."))
+            print("Error on join: Voice client is not connected.")
             return False
         
         try:
             if ctx.voice_client is not None:
                 await self.update_ctx(ctx)
                 await ctx.voice_client.move_to(voice_channel)
+                
 
             else:
                 await self.update_ctx(ctx)
                 await voice_channel.connect()
+            if print_message:
+                await ctx.message.add_reaction('🔊')
         except Exception as e:
             return False
         return True
@@ -125,23 +142,26 @@ class MusicPlayer:
     async def pause(self, ctx):
         """Pauses the current audio playback"""
         if(ctx.voice_client is None):
-            await ctx.send(_("Error: Voice client is not connected."))
+            print("Error: Voice client is not connected.")
             return
         
         if ctx.voice_client.is_playing():
             ctx.voice_client.pause()
-            await ctx.send(_("Audio playback paused."))
+            await ctx.message.add_reaction('⏸️')
+
+
+            #await ctx.send(_("Audio playback paused."))
         else:
-            await ctx.send(_("No audio is currently playing."))
+            print("No audio is currently playing.")
 
     async def unpause(self, ctx):
         """Unpauses the currently playing audio"""
         vc = ctx.voice_client
         if vc and vc.is_paused():
             vc.resume()
-            await ctx.send(_("Audio playback resumed"))
+            await ctx.message.add_reaction('▶️')
         else:
-            await ctx.send(_("No audio is currently playing."))
+            print("No audio is currently playing.")
 
     async def stop(self, ctx):
         """Stops and disconnects the bot from voice"""
@@ -154,11 +174,13 @@ class MusicPlayer:
             self.task.cancel()
             await self.task
             self.task = None
+            await ctx.message.add_reaction('⏹️') 
         elif vc and vc.is_connected():
             await vc.voice_disconnect()
             await vc.disconnect()
+            await ctx.message.add_reaction('⏹️') 
         else:
-            await ctx.send(_("Error: Voice client is not connected."))
+            print("Error on stop: Voice client is not connected.")
 
     async def skip(self, ctx, print_messages=True):
         """Skips the current song"""
@@ -168,9 +190,9 @@ class MusicPlayer:
             return
         if vc and vc.is_playing() or vc and vc.is_paused():
             vc.stop()
-            await ctx.send(_("Skipped song"))
+            await ctx.message.add_reaction('⏭️') 
         else:
-            await ctx.send(_("Error: Voice client is not connected."))
+            print("Error on skip: Voice client is not connected.")
 
     async def play_previous_song(self, ctx):
         """Plays previous song and puts current song in queue"""
@@ -202,6 +224,7 @@ class MusicPlayer:
 
         self.current_song = None
         await self.skip(ctx, print_messages=False)
+        await ctx.message.add_reaction('⏮️') 
         
 
     async def purge_queue(self, ctx):

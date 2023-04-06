@@ -1,19 +1,19 @@
 import openai
 import random
 import asyncio
-import json
+import os
+from dotenv import load_dotenv
 
 import translations
+
+load_dotenv("api_keys.env")
 
 _ = translations.setup_i18n('es')
 
 
 async def ask_gpt(query):
 
-    # Open the JSON file and read the api
-    with open('openai_api.json') as f:
-        data = json.load(f)
-    openai.api_key = data['api']
+    openai.api_key = os.getenv('openapi_key')
 
     backup_answers = _(["Everything is possible if you desire it strongly enough.", "Yes, but not without consequences.", "The signs point towards success.",
                             "Don't count on it.",    "It's better that you discover it for yourself.",    "My sources say no.",
@@ -35,7 +35,7 @@ async def ask_gpt(query):
         {"role": "user", "content": _("You will always respond with short, cryptic, and vague answers. All your responses will always be in a single sentence. Tell me, ") + query},
 
 
-        ],), timeout=10,)
+        ],), timeout=30,)
     
         
     except asyncio.TimeoutError:

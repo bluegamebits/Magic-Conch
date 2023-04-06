@@ -13,8 +13,8 @@ def talk(text):
 
     # Build the voice request
     voice = texttospeech.VoiceSelectionParams(
-        language_code="en-US",
-        name="en-US-Neural2-E",
+        language_code="es-US",
+        name="es-US-Studio-B",
         #ssml_gender=texttospeech.SsmlVoiceGender.NEUTRAL
     )
 

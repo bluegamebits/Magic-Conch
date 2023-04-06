@@ -46,6 +46,10 @@ class PlayerCommands(commands.Cog):
     @commands.command()
     async def previous(self, ctx):
         await self.player.play_previous_song(ctx)
+    
+    @commands.command()
+    async def autoplay(self, ctx, autoplay):
+        await self.player.set_autoplay(ctx, autoplay)
 
     @commands.Cog.listener()
     async def on_message(self, message):

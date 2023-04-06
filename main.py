@@ -17,7 +17,7 @@ intents.members = True
 
 # Define bot variable and activity type
 bot = commands.Bot(
-    command_prefix=',',
+    command_prefix='.',
     description=_("Magic conch bot"),
     intents=intents,
     activity = discord.Activity(type=discord.ActivityType.playing, name='Ask me questions with a .',)
@@ -36,7 +36,7 @@ async def main():
     """
     async with bot:
         await setup_bot() 
-        await bot.start(os.environ['discord2_bot_tokens'])
+        await bot.start(os.environ['discord_bot_tokens'])
         
 
 

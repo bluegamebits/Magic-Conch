@@ -3,6 +3,9 @@ from yt_dlp import YoutubeDL
 import aiohttp
 import asyncio
 import json
+import os
+from dotenv import load_dotenv
+load_dotenv("api_keys.env")
 
 ytdl_format_options_get_info = {
     "format": "bestaudio/best",
@@ -133,3 +136,22 @@ class YTDLSource(discord.PCMVolumeTransformer):
                 data = await YTDLSource.get_video_url(loop, data)
 
         return data
+    
+    @classmethod
+    async def get_recommended(self, current_url, finished_songs, results=1):
+        api_key = os.getenv('youtubev3_key')
+        api_service_name = "youtube"
+        api_version = "v3"
+        video_id = current_url.split("?v=")[1]
+
+        base_url = f"https://www.googleapis.com/{api_service_name}/{api_version}"
+
+        async with aiohttp.ClientSession() as session:
+            url = f"{base_url}/search?part=snippet&relatedToVideoId={video_id}&type=video&key={api_key}"
+            async with session.get(url) as resp:
+                response = await resp.json()
+                ID = response["items"][0]["id"]["videoId"]
+                title = response["items"][0]["snippet"]["title"]
+                video_url = f"https://www.youtube.com/watch?v={ID}"
+
+        return [video_url, title]

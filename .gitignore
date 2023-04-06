@@ -11,3 +11,4 @@ openai_api.json
 __pycache__/conch_voice.cpython-310.pyc
 pyporcupine_api.json
 .vscode/settings.json
+api_keys.env
