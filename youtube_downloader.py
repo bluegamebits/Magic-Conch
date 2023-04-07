@@ -4,6 +4,7 @@ import aiohttp
 import asyncio
 import json
 import os
+import youtube_music
 from dotenv import load_dotenv
 load_dotenv("api_keys.env")
 
@@ -68,14 +69,12 @@ class YTDLSource(discord.PCMVolumeTransformer):
         
         # If video is a url and needs further extraction
         if data.get("_type") == "url":
-            print("url")
             data = await loop.run_in_executor(
                 None, lambda: ytdl_info.extract_info(data['url'], download=False)
             )
 
         # if video is a playlist
         if data.get("_type") == "playlist":
-            print("Playlist")
             playlist_title = data["title"]
             playlist = [playlist_title]
             data = data["entries"]
@@ -86,7 +85,6 @@ class YTDLSource(discord.PCMVolumeTransformer):
         
         # if video is a single video or a livestream
         if data.get("duration") or data.get("live_status"):
-            print("Single video")
             return [data["original_url"], data["title"]]
         
         
@@ -95,7 +93,7 @@ class YTDLSource(discord.PCMVolumeTransformer):
     async def play_final(cls, url, *, loop=None, stream=True, verbose=False):
         loop = loop or asyncio.get_event_loop()
         data = await loop.run_in_executor(
-                None, lambda: ytdl_stream.extract_info(url, download=False)
+                None, lambda: ytdl_info.extract_info(url, download=False)
             )
         # ℹ️ ydl.sanitize_info makes the info json-serializable
         data = ytdl_stream.sanitize_info(data)
@@ -123,12 +121,8 @@ class YTDLSource(discord.PCMVolumeTransformer):
             try:
                 await fetch_url(session, url)
             except:
-                data = await loop.run_in_executor(
-                    None, lambda: ytdl_info.extract_info(f"ytsearch:{url}", download=False)['entries'][0]
-                )
-                video_url = data["url"]
-                video_title = data["title"]
-                return [video_url, video_title]
+                result = await youtube_music.search_ytmusic_async(url)
+                return result
                 
             else:
                 data = {}
@@ -138,20 +132,11 @@ class YTDLSource(discord.PCMVolumeTransformer):
         return data
     
     @classmethod
-    async def get_recommended(self, current_url, finished_songs, results=1):
-        api_key = os.getenv('youtubev3_key')
-        api_service_name = "youtube"
-        api_version = "v3"
-        video_id = current_url.split("?v=")[1]
-
-        base_url = f"https://www.googleapis.com/{api_service_name}/{api_version}"
-
-        async with aiohttp.ClientSession() as session:
-            url = f"{base_url}/search?part=snippet&relatedToVideoId={video_id}&type=video&key={api_key}"
-            async with session.get(url) as resp:
-                response = await resp.json()
-                ID = response["items"][0]["id"]["videoId"]
-                title = response["items"][0]["snippet"]["title"]
-                video_url = f"https://www.youtube.com/watch?v={ID}"
-
-        return [video_url, title]
+    async def get_recommended(self, current_url, results=25):
+        if(current_url[0].startswith("https://music.youtube.com/watch?v=")):
+            recommended_songs = await youtube_music.get_recommended_async(current_url)
+            return recommended_songs
+        else:
+            song = await youtube_music.search_ytmusic_async(current_url)
+            recommended_songs = await youtube_music.get_recommended_async(song[0])
+            return recommended_songs

@@ -8,10 +8,14 @@ import discord
 from async_timeout import timeout
 
 class Song:
-    def __init__(self, video_url, song_title, added_by):
+    def __init__(self, video_url, song_title, added_by, autoplay=False):
         self.name = song_title
         self.video_url = video_url
         self.added_by = added_by
+        if autoplay:
+            self.autoplay = " [Autoplay]"
+        else:
+            self.autoplay = ""
 
     async def play(self, ctx, bot, song_ended, volume):
         """Plays the given source in the voice channel"""
@@ -26,7 +30,7 @@ class Song:
                 source, after=lambda _: bot.loop.call_soon_threadsafe(song_ended.set)
             )
         
-            embed = discord.Embed(title=_("Now playing") + " [Autoplay]", description=f"[{self.name}]({self.video_url}) [{self.added_by.mention}]", color=0xCFA2D8)
+            embed = discord.Embed(title=_("Now playing") + self.autoplay, description=f"[{self.name}]({self.video_url}) [{self.added_by.mention}]", color=0xCFA2D8)
             await ctx.send(embed=embed)
         else:
             print("No source")
@@ -62,8 +66,8 @@ class MusicPlayer:
                 await self.current_song.play(self.ctx, self.bot, self.song_ended, self.player_volume)
                 await self.song_ended.wait()
                 if(self.autoplay and self.queue.qsize() == 0):
-                    video_url, song_title = await youtube_downloader.YTDLSource.get_recommended(self.current_song.video_url, self.finished_queue)
-                    await self.queue.put(Song(video_url, song_title, self.ctx.author))
+                    source = await youtube_downloader.YTDLSource.get_recommended(self.current_song.video_url)
+                    await self._add_to_queue(self.ctx, source, autoplay=True)
                 if self.current_song:
                     await self.finished_queue.put(self.current_song)
                     self.current_song = None
@@ -76,14 +80,14 @@ class MusicPlayer:
             except Exception as e:
                 pass
 
-    async def _add_to_queue(self, ctx, source):
+    async def _add_to_queue(self, ctx, source, autoplay=False, silent=False):
         print(source)
         if len(source) > 2:
             num_of_songs = len(source) - 1 
             embed = discord.Embed(description=_("Queued ") + f"{num_of_songs} canciones.", color=0xCFA2D8)
             await ctx.send(embed=embed)
             for video_url, song_title in source[1:]:
-                new_song = Song(video_url, song_title, ctx.author)
+                new_song = Song(video_url, song_title, ctx.author, autoplay)
                 await self.queue.put(new_song)
                 
         else:
@@ -105,6 +109,7 @@ class MusicPlayer:
         # Starts the player loop, only the first time play_song is called
         if not self.task:
             self.task = asyncio.create_task(self.player_loop())
+            
     async def set_autoplay(self, ctx, autoplay):
         """Sets autoplay on or off"""
         if autoplay.lower() == "on":
