@@ -6,7 +6,71 @@ _ = translations.setup_i18n('es')
 import discord
 
 from async_timeout import timeout
+import collections
+import itertools
 
+import asyncio
+
+class SongQueue:
+    class QueueEmpty(Exception):
+        """Exception raised when trying to get an item from an empty queue."""
+        pass
+
+    def __init__(self):
+        self._deque = collections.deque()
+        self._condition = asyncio.Condition()
+
+    async def put(self, item):
+        async with self._condition:
+            self._deque.append(item)
+            self._condition.notify_all()
+            
+    async def put_left(self, item):
+        async with self._condition:
+            self._deque.appendleft(item)
+            self._condition.notify_all()
+
+    async def get(self):
+        async with self._condition:
+            while not self._deque:
+                await self._condition.wait()
+            return self._deque.popleft()
+        
+    async def get_right_nowait(self):
+        async with self._condition:
+            return self._deque.pop()
+            
+        
+    async def get_nowait(self):
+        async with self._condition:
+            if not self._deque:
+                raise self.QueueEmpty("The queue is empty.")
+            return self._deque.popleft()
+        
+    async def size(self):
+        async with self._condition:
+            return len(self._deque)
+    
+    async def get_copy(self):
+        async with self._condition:
+            return list(self._deque)
+        
+    async def set_copy(self, list):
+        if(list):
+            async with self._condition:
+                self._deque = collections.deque(list)
+        else:
+            return
+        
+    async def empty_queue(self):
+        async with self._condition:
+                queue_size = len(self._deque)
+                try:
+                    self._deque.clear()
+                except:
+                    return 0
+                return queue_size
+        
 class Song:
     def __init__(self, video_url, song_title, added_by, autoplay=False):
         self.name = song_title
@@ -25,11 +89,16 @@ class Song:
         vc = ctx.voice_client
         source = await youtube_downloader.YTDLSource.play_final(self.video_url)
         if(source):
-            source.volume = volume
-            vc.play(
-                source, after=lambda _: bot.loop.call_soon_threadsafe(song_ended.set)
-            )
-        
+            try:
+                source.volume = volume
+                vc.play(
+                    source, after=lambda _: bot.loop.call_soon_threadsafe(song_ended.set)
+                )
+            except Exception as e:
+                print(f"error on playback {e}")
+                bot.loop.call_soon_threadsafe(song_ended.set)
+                return
+            
             embed = discord.Embed(title=_("Now playing") + self.autoplay, description=f"[{self.name}]({self.video_url}) [{self.added_by.mention}]", color=0xCFA2D8)
             await ctx.send(embed=embed)
         else:
@@ -40,8 +109,8 @@ class MusicPlayer:
     def __init__(self, bot):
         self.current_song = None
         # TODO: Rewrite to use deque instead of asyncio
-        self.queue = asyncio.Queue()
-        self.finished_queue = asyncio.Queue()
+        self.queue = SongQueue()
+        self.finished_queue = SongQueue()
         self.bot = bot
         self.ctx = None
         self.song_ended = asyncio.Event()
@@ -65,7 +134,7 @@ class MusicPlayer:
                 self.current_song = await self.queue.get()
                 await self.current_song.play(self.ctx, self.bot, self.song_ended, self.player_volume)
                 await self.song_ended.wait()
-                if(self.autoplay and self.queue.qsize() == 0):
+                if(self.autoplay and await self.queue.size() == 0):
                     source = await youtube_downloader.YTDLSource.get_recommended(self.current_song.video_url)
                     await self._add_to_queue(self.ctx, source, autoplay=True)
                 if self.current_song:
@@ -99,16 +168,17 @@ class MusicPlayer:
                 await ctx.send(embed=embed)
 
     async def play_song(self, ctx, url):
-        if not (await self.join(ctx, print_message=False)):
-            return 
-        
-        task = asyncio.create_task(self._get_source(url))
-        source = await task
-        await self._add_to_queue(ctx, source)
+        async with ctx.typing():
+            if not (await self.join(ctx, print_message=False)):
+                return 
+            print("Got to after join!")
+            task = asyncio.create_task(self._get_source(url))
+            source = await task
+            await self._add_to_queue(ctx, source)
 
         # Starts the player loop, only the first time play_song is called
-        if not self.task:
-            self.task = asyncio.create_task(self.player_loop())
+            if not self.task:
+                self.task = asyncio.create_task(self.player_loop())
             
     async def set_autoplay(self, ctx, autoplay):
         """Sets autoplay on or off"""
@@ -175,7 +245,7 @@ class MusicPlayer:
         if vc and vc.is_connected() and self.task:
             
             self.current_song = None
-            self.queue = asyncio.Queue()
+            self.queue = SongQueue()
             self.task.cancel()
             await self.task
             self.task = None
@@ -192,7 +262,6 @@ class MusicPlayer:
         vc = ctx.voice_client
         if not print_messages:
             vc.stop()
-            return
         if vc and vc.is_playing() or vc and vc.is_paused():
             vc.stop()
             await ctx.message.add_reaction('⏭️') 
@@ -201,31 +270,17 @@ class MusicPlayer:
 
     async def play_previous_song(self, ctx):
         """Plays previous song and puts current song in queue"""
-        if(self.finished_queue.qsize() < 1):
+        if(await self.finished_queue.size() < 1):
             return
-        temp_list = []
-        while not self.finished_queue.empty():
-            try:
-                temp_list.append(self.finished_queue.get_nowait())
-            except asyncio.QueueEmpty:
-                break
-
-        previous_song = temp_list.pop()
-        for song in temp_list:
-            await self.finished_queue.put(song)
-
-        temp_list = []
-        while not self.queue.empty():
-            try:
-                temp_list.append(self.queue.get_nowait())
-            except asyncio.QueueEmpty:
-                break
         
-        temp_list.insert(0, previous_song)
-        if(self.current_song):
-            temp_list.insert(1, self.current_song)
-        for song in temp_list:
-            await self.queue.put(song)
+        previous_song = await self.finished_queue.get_right_nowait()
+        current_song = self.current_song
+        
+        if not (self.current_song):
+            await self.queue.put_left(previous_song)
+        else:
+            await self.queue.put_left(current_song)
+            await self.queue.put_left(previous_song)
 
         self.current_song = None
         await self.skip(ctx, print_messages=False)
@@ -234,15 +289,8 @@ class MusicPlayer:
 
     async def purge_queue(self, ctx):
         """Erases all songs from the queue"""
-        queue_size = self.queue.qsize()
+        queue_size = await self.queue.empty_queue()
 
-        while not self.queue.empty():
-            try:
-                item = self.queue.get_nowait()
-            except asyncio.QueueEmpty:
-                break
-    
-        self.current_song = None
         if queue_size == 1:
             await ctx.send(f"{queue_size} song has been removed from the queue.")
         elif queue_size > 1:
@@ -251,8 +299,9 @@ class MusicPlayer:
             await ctx.send(f"Queue is already empty.")
         return queue_size
 
-    async def volume(self, ctx, volume: int):
+    async def volume(self, ctx, volume):
         """Changes the player's volume"""
+        volume = int(volume)
         vc = ctx.voice_client
         if vc and vc.source and vc.is_connected():
             vc.source.volume = volume / 100
