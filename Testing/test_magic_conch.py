@@ -114,6 +114,21 @@ async def join_bots_to_vc():
     await player.join(ctx)
     print("after cog join") 
     return ctx, test_vc, player
+
+async def _play_song_and_confirm_result(player, ctx, search_term, queue=False):
+    vc = ctx.voice_client
+    if (vc.is_playing()):  # If already playing a song, the test fails
+        return -1, False
+    
+    response_msg = asyncio.create_task(wait_for_message(ctx.channel, timeout=5))
+    await player.play_song(ctx, search_term)
+    await wait_for_song_to_start(vc, 10)
+    response_msg = await response_msg
+    vc_playing = vc.is_playing()
+    
+    await player.skip(ctx, print_messages=False)
+    return response_msg, vc_playing
+
 @pytest.mark.asyncio
 async def test_song_types(bots_setup):
     # Search term
@@ -122,55 +137,35 @@ async def test_song_types(bots_setup):
     ctx, test_vc, player = await join_bots_to_vc()
 
     print("Testing video search term")
-    song_loop = asyncio.create_task(player.play_song(ctx, "The Legend of Zelda: Breath of the Wild - Theme (SoundTrack)"))
-    vc = ctx.voice_client
-    await wait_for_song_to_start(vc, 10)
-    assert vc.is_playing()
-    await asyncio.sleep(2)
-    await player.skip(ctx)
-    
+    response_msg, vc_playing = await _play_song_and_confirm_result(player, ctx, "The Legend of Zelda: Breath of the Wild - Theme (SoundTrack)")
+    assert response_msg == "" and vc_playing
 
     print("Testing single video watch link")
-    song_loop = asyncio.create_task(player.play_song(ctx, "https://www.youtube.com/watch?v=cPWBG6_jn4Y"))
-    vc = ctx.voice_client
-    await wait_for_song_to_start(vc, 10)
-    assert vc.is_playing()
-    await asyncio.sleep(2)
-    await player.skip(ctx)
+    response_msg, vc = await _play_song_and_confirm_result(player, ctx, "https://www.youtube.com/watch?v=cPWBG6_jn4Y")
+    assert response_msg == "" and vc_playing
     
     print("Testing playlist watch link")
-    song_loop = asyncio.create_task(player.play_song(ctx, "https://www.youtube.com/watch?v=xGi23M_5lXg&list=PLh4Eme5gACZEAazTK1vSZn3DCYJLQ4YHH"))
-    vc = ctx.voice_client
-    await wait_for_song_to_start(vc, 100)
-    assert vc.is_playing()
-    await asyncio.sleep(2)
-    response_msg = asyncio.create_task(wait_for_message(text_channel, timeout=5))
+    response_msg, vc = await _play_song_and_confirm_result(player, ctx, "https://www.youtube.com/watch?v=xGi23M_5lXg&list=PLh4Eme5gACZEAazTK1vSZn3DCYJLQ4YHH")
     queue_size = await player.purge_queue(ctx)
-    response_msg = await response_msg
     assert response_msg.content == f"{queue_size} songs have been removed from the queue."
-    await player.skip(ctx) 
-    await asyncio.sleep(5)
     
     print("Testing playlist playlist link")
     song_loop = asyncio.create_task(player.play_song(ctx, "https://www.youtube.com/playlist?list=PLh4Eme5gACZEAazTK1vSZn3DCYJLQ4YHH"))
     vc = ctx.voice_client
     await wait_for_song_to_start(vc, 10)
     assert vc.is_playing()
-    await asyncio.sleep(2)
     response_msg = asyncio.create_task(wait_for_message(text_channel, timeout=5))
     queue_size = await player.purge_queue(ctx)
     response_msg = await response_msg
     assert response_msg.content == f"{queue_size} songs have been removed from the queue." 
     queue_size = await player.purge_queue(ctx)
     await player.skip(ctx) 
-    await asyncio.sleep(5)
     
     print("Testing stream link")
     song_loop = asyncio.create_task(player.play_song(ctx, "https://www.youtube.com/watch?v=jfKfPfyJRdk"))
     vc = ctx.voice_client
     await wait_for_song_to_start(vc, 10)
     assert vc.is_playing()
-    await asyncio.sleep(2)
     await player.skip(ctx)
 
     await _cleanup_vc(player, test_vc, ctx)
