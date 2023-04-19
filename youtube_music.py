@@ -7,8 +7,6 @@ ytmusic = YTMusic("browser.json")
 
 def search_ytmusic(search_term):
     search_results = ytmusic.search(search_term, filter = "songs")
-    with open('output.json', 'w') as json_file:
-        json.dump(search_results, json_file)
     id = search_results[0]["videoId"]
     title = search_results[0]["title"]
     artists = search_results[0]["artists"]
