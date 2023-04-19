@@ -6,7 +6,7 @@ import google_voice
 import openai_module
 _ = translations.setup_i18n('es')
 
-class voice(commands.Cog):
+class Voice():
     def __init__(self, bot):
         self.bot = bot
         self._last_member = None
@@ -21,8 +21,7 @@ class voice(commands.Cog):
 
         await voice_channel.connect()
 
-    @commands.command()
-    async def say(self, ctx, *, query):
+    async def say(self, ctx, query):
         """Uses google voice to say the entered message"""
         
         google_voice.talk(query) # Sends the message to google's API and generates file "output.mp3" with recorded message
@@ -40,8 +39,7 @@ class voice(commands.Cog):
         except Exception as e:
             print(_("Error playing audio file: ") + e)
 
-    @commands.command()
-    async def ask(self, ctx, *, query):
+    async def ask(self, ctx, query):
         """
         Asks the magic conch a question.
         Currently uses Open AI API using the gpt3-turbo model with a modified intial prompt message.
@@ -56,7 +54,7 @@ class voice(commands.Cog):
         print("Ask ended.")
 
 async def setup(bot):
-    await bot.add_cog(voice(bot)) 
+    await bot.add_cog(Voice(bot)) 
 
 
 

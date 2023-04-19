@@ -17,15 +17,16 @@ intents.members = True
 
 # Define bot variable and activity type
 bot = commands.Bot(
-    command_prefix='.',
+    command_prefix=',',
     description=_("Magic conch bot"),
     intents=intents,
     activity = discord.Activity(type=discord.ActivityType.playing, name='Ask me questions with a .',)
 )
 
 async def setup_bot():
-    await bot.load_extension("commands")
+    await bot.load_extension("player_commands")
     await bot.load_extension("listener")
+    await bot.load_extension("conch_voice")
 
 async def main():
     """Load the 'youtube_player' extension, and start the bot using the Discord bot token from the 'Discord_bot_tokens' environment variable.
@@ -35,7 +36,7 @@ async def main():
     """
     async with bot:
         await setup_bot() 
-        await bot.start(os.environ['discord_bot_tokens'])
+        await bot.start(os.environ['discord2_bot_tokens'])
         
 
 

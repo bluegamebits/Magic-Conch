@@ -116,6 +116,8 @@ class MusicPlayer:
         self.song_ended = asyncio.Event()
         self.task = None
         self.autoplay = False
+        self.guild_data = {}
+        print("Finished starting new MusicPlayer class.")
 
     async def update_ctx(self, ctx):
         self.ctx = ctx
@@ -129,8 +131,6 @@ class MusicPlayer:
             self.song_ended.clear()
             self.player_volume = 0.5  
             while True:
-                print("loopy loop start")
-                
                 self.current_song = await self.queue.get()
                 await self.current_song.play(self.ctx, self.bot, self.song_ended, self.player_volume)
                 await self.song_ended.wait()
@@ -170,14 +170,17 @@ class MusicPlayer:
     async def play_song(self, ctx, url):
         async with ctx.typing():
             if not (await self.join(ctx, print_message=False)):
+                print("Unable to join Voice channel.")
                 return 
-            print("Got to after join!")
+            print("Joined Voice channel.")
             task = asyncio.create_task(self._get_source(url))
             source = await task
+            print("Got source.")
             await self._add_to_queue(ctx, source)
-
+            print("Added to queue.")            
         # Starts the player loop, only the first time play_song is called
             if not self.task:
+                print("Started new music loop.")
                 self.task = asyncio.create_task(self.player_loop())
             
     async def set_autoplay(self, ctx, autoplay):
@@ -257,7 +260,7 @@ class MusicPlayer:
         else:
             print("Error on stop: Voice client is not connected.")
 
-    async def skip(self, ctx, print_messages=True):
+    async def skip(self, ctx, print_messages=True, songs=1):
         """Skips the current song"""
         vc = ctx.voice_client
         if not print_messages:
@@ -314,10 +317,11 @@ class MusicPlayer:
         """Retrieves source from url or search"""
         print("Getting source")
         for i in range(10):
-
-            source = await youtube_downloader.YTDLSource.from_url(url, loop=self.bot.loop, verbose=True)
-            return source
-
+            try:
+                source = await youtube_downloader.YTDLSource.from_url(url, loop=self.bot.loop, verbose=True)
+                return source
+            except Exception as e:
+                print(f"Error on getting source: {e}")
             print(f"Failed to get source : {e}")
             print(f"Retrying... (attempt {i+1}/10)")
             await asyncio.sleep(1)
