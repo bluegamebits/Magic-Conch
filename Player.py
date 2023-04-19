@@ -39,7 +39,6 @@ class SongQueue:
     async def get_right_nowait(self):
         async with self._condition:
             return self._deque.pop()
-            
         
     async def get_nowait(self):
         async with self._condition:
@@ -301,6 +300,27 @@ class MusicPlayer:
         else:
             await ctx.send(f"Queue is already empty.")
         return queue_size
+
+    async def list_queue(self, ctx):
+        """Shows the current queue"""
+        print("Got to list!")
+        if await self.queue.size() < 1 and self.current_song == None:
+            return
+        
+        current_queue = await self.queue.get_copy()
+        queue_txt = f"```1) {self.current_song.name} <- Current song\n"
+        i = 1
+        for song in current_queue:
+            i += 1
+            queue_txt += f"{i}) {song.name}\n"
+        queue_txt += "```"
+        if(i > 1):
+            title = f"Curent Queue ({i} songs)"
+        else: 
+            title = f"Curent Queue ({i} song)"
+
+        embed = discord.Embed(title=title, description=f"{queue_txt}", color=0xCFA2D8)
+        await ctx.send(embed=embed)
 
     async def volume(self, ctx, volume):
         """Changes the player's volume"""

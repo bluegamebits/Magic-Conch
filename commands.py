@@ -20,7 +20,7 @@ class Commands(commands.Cog):
         if guild:
             return guild
         else:
-            self.guild[ctx_guild] =  Player.MusicPlayer(self.bot)
+            self.guildPlayer[ctx_guild] =  Player.MusicPlayer(self.bot)
             return self.guildPlayer.get(ctx_guild)
         
     async def _get_guild_voice(self, ctx):
@@ -81,6 +81,11 @@ class Commands(commands.Cog):
     async def autoplay(self, ctx, autoplay):
         player = await self._get_guild_player(ctx)
         await player.set_autoplay(ctx, autoplay)
+
+    @commands.command()
+    async def queue(self, ctx):
+        player = await self._get_guild_player(ctx)
+        await player.list_queue(ctx)
 
     @commands.command()
     async def say(self, ctx, *, query):
