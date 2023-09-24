@@ -75,7 +75,7 @@ class Song:
         self.name = song_title
         self.video_url = video_url
         self.added_by = added_by
-        if autoplay:
+        if self.added_by == "Autoplay":
             self.autoplay = " [Autoplay]"
         else:
             self.autoplay = ""
@@ -83,10 +83,19 @@ class Song:
     async def play(self, ctx, bot, song_ended, volume):
         """Plays the given source in the voice channel"""
         print("Playing song: " + self.name)
-        print("Added by: " + self.added_by.name)
+        if self.autoplay:
+            print("Added by: Autoplay")
+        else:
+            print("Added by: " + self.added_by.name)
 
         vc = ctx.voice_client
-        source = await youtube_downloader.YTDLSource.play_final(self.video_url)
+
+        try:
+            source = await youtube_downloader.YTDLSource.play_final(self.video_url)
+        except Exception as e:
+            print(e)
+            source = None
+
         if(source):
             try:
                 source.volume = volume
@@ -97,8 +106,11 @@ class Song:
                 print(f"error on playback {e}")
                 bot.loop.call_soon_threadsafe(song_ended.set)
                 return
-            
-            embed = discord.Embed(title=_("Now playing") + self.autoplay, description=f"[{self.name}]({self.video_url}) [{self.added_by.mention}]", color=0xCFA2D8)
+
+            if self.added_by == "Autoplay":
+                embed = discord.Embed(title=_("Now playing") + self.autoplay, description=f"[{self.name}]({self.video_url})", color=0xCFA2D8)
+            else: 
+                embed = discord.Embed(title=_("Now playing") + self.autoplay, description=f"[{self.name}]({self.video_url}) [{self.added_by.mention}]", color=0xCFA2D8)
             await ctx.send(embed=embed)
         else:
             print("No source")
@@ -109,6 +121,7 @@ class MusicPlayer:
         self.current_song = None
         # TODO: Rewrite to use deque instead of asyncio
         self.queue = SongQueue()
+        self.autoplay_queue = SongQueue()
         self.finished_queue = SongQueue()
         self.bot = bot
         self.ctx = None
@@ -134,8 +147,16 @@ class MusicPlayer:
                 await self.current_song.play(self.ctx, self.bot, self.song_ended, self.player_volume)
                 await self.song_ended.wait()
                 if(self.autoplay and await self.queue.size() == 0):
-                    source = await youtube_downloader.YTDLSource.get_recommended(self.current_song.video_url)
-                    await self._add_to_queue(self.ctx, source, autoplay=True)
+                    if(await self.autoplay_queue.size() == 0):
+                        print("getting more autoplay.. ")
+                        source = await youtube_downloader.YTDLSource.get_recommended(self.current_song.video_url)
+                        for video_url, song_title in source[1:]:
+                            new_song = Song(video_url, song_title, "Autoplay", True)
+                            await self.autoplay_queue.put(new_song)
+                    await self.queue.put(await self.autoplay_queue.get())
+                else:
+                    print("no autoplay")
+                
                 if self.current_song:
                     await self.finished_queue.put(self.current_song)
                     self.current_song = None
@@ -146,7 +167,7 @@ class MusicPlayer:
                 await self.ctx.voice_client.disconnect()
                 await self.ctx.voice_client.voice_disconnect()
             except Exception as e:
-                pass
+                print(e)
 
     async def _add_to_queue(self, ctx, source, autoplay=False, silent=False):
         print(source)
@@ -160,20 +181,39 @@ class MusicPlayer:
                 
         else:
             video_url, song_title = source
-            new_song = Song(video_url, song_title, ctx.author)
+            print(f"Autoplay: {autoplay}")
+            if autoplay: 
+                new_song = Song(video_url, song_title, "Autoplay")
+            else:
+                new_song = Song(video_url, song_title, ctx.author)
+                print("autoplay about to be emptied.")
+                await self.autoplay_queue.empty_queue()
             await self.queue.put(new_song)
-            if self.current_song != None:
+            print(f"Song = {new_song}")
+            if self.current_song != None and autoplay == False:
                 embed = discord.Embed(description=_("Queued ") + f"[{new_song.name}]({new_song.video_url}) [{self.ctx.author.mention}]", color=0xCFA2D8)
                 await ctx.send(embed=embed)
 
     async def play_song(self, ctx, url):
+
+        timeout_seconds = 5
+
         async with ctx.typing():
             if not (await self.join(ctx, print_message=False)):
                 print("Unable to join Voice channel.")
                 return 
             print("Joined Voice channel.")
-            task = asyncio.create_task(self._get_source(url))
-            source = await task
+
+            try:
+                task = asyncio.create_task(self._get_source(url))
+                source = await asyncio.wait_for(task, timeout=timeout_seconds)
+            except asyncio.TimeoutError:
+                await ctx.send(f"The operation timed out after {timeout_seconds} seconds.")
+                return
+            except Exception as e:
+                await ctx.send(f"An error occured: {str(e)}")
+                return
+
             print("Got source.")
             await self._add_to_queue(ctx, source)
             print("Added to queue.")            
@@ -213,6 +253,7 @@ class MusicPlayer:
             if print_message:
                 await ctx.message.add_reaction('🔊')
         except Exception as e:
+            print(e)
             return False
         return True
 

@@ -13,3 +13,4 @@ pyporcupine_api.json
 .vscode/settings.json
 api_keys.env
 browser.json
+oauth.json

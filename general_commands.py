@@ -4,7 +4,6 @@ import discord
 import Player
 from conch_voice import Voice
 import translations
-from image_generator import ImageGenerator
 
 _ = translations.setup_i18n('es')
 

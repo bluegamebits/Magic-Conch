@@ -2,7 +2,7 @@ from ytmusicapi import YTMusic
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 import json
-ytmusic = YTMusic("browser.json")
+ytmusic = YTMusic("oauth.json")
 
 
 def search_ytmusic(search_term):
@@ -15,6 +15,7 @@ def search_ytmusic(search_term):
 
 def get_recommended(url):
     video_id = url.split('?v=')[1]
+    print(f"Video ID: {video_id}")
     watch_playlist = ytmusic.get_watch_playlist(video_id)
 
     recommended_songs = ["Youtube Music Autoplay"]
@@ -24,7 +25,7 @@ def get_recommended(url):
         artists = ", ".join([artist['name'] for artist in song["artists"]])
         title += f" - {artists}"
         recommended_songs.append([video_url, title])
-    
+    print (f"recommended songs: {recommended_songs}")
     return recommended_songs[:1] + recommended_songs[2:]
 
 
