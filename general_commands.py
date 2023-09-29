@@ -1,5 +1,4 @@
 from discord.ext import commands
-import discord
 
 import Player
 from conch_voice import Voice
@@ -13,7 +12,6 @@ class GeneralCommands(commands.Cog):
         self._last_member = None 
         self.guildPlayer = {}
         self.guildVoice = {}
-        self.image_generator = ImageGenerator(self.bot)
 
     async def _get_guild_player(self, ctx):
         ctx_guild = ctx.guild.id
